@@ -1,66 +1,136 @@
-# Portfel dywidendowy (XTB — ręczne loty, ceny Yahoo)
+# Fine net dash / portfel dywidendowy
 
-Aplikacja webowa: lista spółek dywidendowych (50+), zapisywanie zakupów (także ułamkowych), średnia cena kupna, odświeżanie cen przez Yahoo Finance (`yfinance`), alerty gdy cena jest o wybrany procent poniżej średniej kupna.
+Web app for a manual dividend portfolio: universe of dividend stocks, purchase lots (including fractional), average cost, Yahoo Finance prices (`yfinance`), and optional ntfy alerts when price drops below your threshold.
 
-## Wymagania
+Repository: [github.com/blazejwrobel98/Fine-net-dash](https://github.com/blazejwrobel98/Fine-net-dash)
 
-- Python 3.11+ (testowane na 3.13)
-- Node.js 18+ (frontend)
+**License:** [MIT](LICENSE) — use and run the project freely; no warranty.
 
-## Backend
+## What you need
+
+| Component | Version |
+|-----------|---------|
+| Python | 3.11+ (tested on 3.13) |
+| Node.js | 18+ (for the React frontend) |
+
+Optional: **XTB is not integrated** — you enter tickers as on Yahoo (e.g. `PZU.WA`, `KO`).
+
+---
+
+## Run locally (recommended for development)
+
+You run **two processes**: API (FastAPI) and the Vite dev server (UI with hot reload).
+
+### 1. Backend
+
+**Windows (PowerShell)**
 
 ```powershell
 cd backend
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-# opcjonalnie: $env:DATABASE_URL = "sqlite:///D:/sciezka/do/portfolio.db"
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+Copy-Item .env.example .env   # optional
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-- API: `http://127.0.0.1:8000/api/...`
-- Jeśli istnieje `frontend/dist`, ten sam serwer serwuje dashboard pod `/`.
+**Linux / macOS**
 
-Zmienna `SKIP_SCHEDULER=1` wyłącza harmonogram (np. testy).
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # optional
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
 
-## Frontend (development)
+- REST API: `http://127.0.0.1:8000/api/...`
+- Set `SKIP_SCHEDULER=1` in `.env` or the environment if you want no background jobs (e.g. focused debugging).
 
-```powershell
+### 2. Frontend (separate terminal)
+
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Vite proxy: `/api` → `http://127.0.0.1:8000`.
+Open **http://127.0.0.1:5173** — Vite proxies `/api` to `http://127.0.0.1:8000`.
 
-## Frontend (produkcja w LAN)
+---
 
-```powershell
-cd frontend
-npm run build
+## Run as a single server (production-style)
+
+Build the SPA so FastAPI can serve `frontend/dist` from the same port.
+
+```bash
+cd frontend && npm install && npm run build
 cd ../backend
+# activate venv as above
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Wejdź z telefonu: `http://<IP-komputera>:8000`.
+Then open `http://127.0.0.1:8000/` (or `http://<your-LAN-IP>:8000` from another device on the network).
 
-## Powiadomienia na iPhone (ntfy)
+---
 
-1. Zainstaluj aplikację [ntfy](https://ntfy.sh/) (App Store).
-2. Wybierz „Subscribe to topic” i wpisz **unikalny**, trudny do zgadnięcia temat (np. losowy ciąg).
-3. W dashboardzie → **Alerty i ustawienia** wpisz ten sam temat w polu „Temat ntfy”. Opcjonalnie zmień URL na własny serwer [self-hosted ntfy](https://docs.ntfy.sh/install/).
-4. Włącz alerty i zapisz. Backend co N minut odświeża ceny i wysyła POST do ntfy, gdy cena ≤ średnia × (1 − próg% / 100). Między powiadomieniami dla tego samego tickera jest **cooldown ~6 h** (żeby nie spamować).
+## Configuration
 
-Alternatywy (wymagałyby dopisania integracji): Pushover, Telegram Bot, e-mail SMTP.
+Copy `backend/.env.example` to `backend/.env` and edit. All variables are optional; defaults use SQLite at `backend/data/portfolio.db` and sensible CORS for local Vite.
 
-## Uwagi
+---
 
-- **XTB** nie jest podłączone — wpisujesz tylko to, co kupiłeś (ticker jak w Yahoo, np. `PZU.WA`, `KO`).
-- Ceny z Yahoo bywają chwilowo niedostępne (sieć, limity); wtedy w UI zobaczysz „—” przy cenie.
-- Lista spółek to punkt wyjścia (PL / EU / US); możesz rozszerzać bazę lub dodać endpoint edycji w przyszłości.
+## Windows: install as a user app (Task Scheduler + log)
 
-## Testy
+**From the repo:** build the frontend once, then run the installer (it copies `backend/` and `frontend/dist/` into your install directory):
+
+```powershell
+cd frontend
+npm install
+npm run build
+cd ..\scripts
+.\install-windows.ps1
+```
+
+**From a release package:** after `.\scripts\build-release.ps1`, open `release\DividendPortfolio` and follow `INSTALL.txt`, or run `.\install-windows.ps1` from that folder’s `scripts` subfolder.
+
+Server logs when using `Run-Dashboard.ps1`: `%LOCALAPPDATA%\DividendPortfolio\logs\server.log` (default install path).
+
+---
+
+## iPhone alerts (ntfy)
+
+1. Install [ntfy](https://ntfy.sh/) from the App Store.
+2. Subscribe to a **unique**, hard-to-guess topic.
+3. In the dashboard → **Alerty i ustawienia**, enter the same topic (and optional self-hosted ntfy URL).
+4. Backend refreshes prices on a schedule and POSTs to ntfy when price ≤ average × (1 − threshold%). There is a **~6 h cooldown** per ticker to reduce spam.
+
+---
+
+## Tests
 
 ```powershell
 cd backend
-$env:SKIP_SCHEDULER = "1"
+$env:SKIP_SCHEDULER = "1"   # PowerShell
 python -m pytest tests -v
 ```
+
+```bash
+cd backend
+export SKIP_SCHEDULER=1
+python -m pytest tests -v
+```
+
+---
+
+## Notes
+
+- Yahoo data can be temporarily unavailable (network, rate limits); the UI may show "—" for a price.
+- The stock universe is a starting set (PL / EU / US); you can extend it in code or via future tooling.
+
+---
+
+## License
+
+[MIT](LICENSE) — Copyright (c) 2026 blazejwrobel98.

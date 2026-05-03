@@ -2,6 +2,11 @@
   "name": "dividend-portfolio-dashboard",
   "private": true,
   "version": "0.1.0",
+  "description": "Dividend portfolio dashboard (React + Vite)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blazejwrobel98/Fine-net-dash.git"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",
