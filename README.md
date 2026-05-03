@@ -6,6 +6,18 @@ Repository: [github.com/blazejwrobel98/Fine-net-dash](https://github.com/blazejw
 
 **License:** [MIT](LICENSE) — use and run the project freely; no warranty.
 
+## Stable releases (Docker, Linux, Windows)
+
+Tag a version as `v*` (example `v0.2.0`) and push it. GitHub Actions **Release** workflow then:
+
+| Artifact | Use case |
+|----------|-----------|
+| **Docker** | `docker pull ghcr.io/blazejwrobel98/fine-net-dash:v0.2.0` then `docker run -p 8000:8000 -v fine-data:/app/backend/data ghcr.io/blazejwrobel98/fine-net-dash:v0.2.0` — or use this repo’s `docker compose up --build` for a local image `fine-net-dash:local`. |
+| **Linux** | Download `FineNetDash-linux-amd64.tar.gz` from [Releases](https://github.com/blazejwrobel98/Fine-net-dash/releases), extract, run `cd FineNetDash/scripts && ./install-linux.sh` (optional `SKIP_SYSTEMD=1`). |
+| **Windows** | **ZIP:** unzip `DividendPortfolio.zip`, follow `INSTALL.txt` / `scripts\install-windows.ps1`. **MSI:** installs under `%LOCALAPPDATA%\Programs\FineNetDash\` — then run once: `powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1"` (venv + Task Scheduler). |
+
+Maintainers: build the MSI locally with [WiX](https://wixtoolset.org/) (`dotnet tool install --global wix`), then `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
+
 ## What you need
 
 | Component | Version |

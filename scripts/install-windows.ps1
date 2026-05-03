@@ -23,6 +23,9 @@
 .PARAMETER ForceMigrateDb
   Overwrite install DB even if it already has purchase lots (backup .bak created).
 
+.PARAMETER SkipFileCopy
+  Do not robocopy from SourcePath (files already present, e.g. after MSI). Implies -SourcePath defaults to -InstallPath when omitted.
+
 .NOTES
   For a desktop app with SQLite in your profile, "at logon" is reliable. True "at boot before login"
   needs SYSTEM-visible paths (e.g. ProgramData) and extra setup.
@@ -34,11 +37,15 @@ param(
     [string]$TaskName = "DividendPortfolio",
     [switch]$NoStartNow,
     [string]$MigrateDbFrom = "",
-    [switch]$ForceMigrateDb
+    [switch]$ForceMigrateDb,
+    [switch]$SkipFileCopy
 )
 
 $ErrorActionPreference = "Stop"
 $ScriptsDir = $PSScriptRoot
+if ($SkipFileCopy -and [string]::IsNullOrWhiteSpace($SourcePath)) {
+    $SourcePath = $InstallPath
+}
 if (-not $SourcePath) {
     $parent = Split-Path $ScriptsDir
     $fromRelease = Join-Path $parent "release\DividendPortfolio"
@@ -67,14 +74,21 @@ if (Get-Command py -ErrorAction SilentlyContinue) {
 }
 
 Write-Host "Installing to: $InstallPath"
-if (Test-Path $InstallPath) {
-    Write-Warning "Folder exists - files will merge; existing venv is kept if present."
+if (-not $SkipFileCopy) {
+    if (Test-Path $InstallPath) {
+        Write-Warning "Folder exists - files will merge; existing venv is kept if present."
+    }
+    New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
+    # Never overwrite runtime DB in install/backend/data during app updates.
+    robocopy $SourcePath $InstallPath /E /XD venv backend\data /NFL /NDL /NJH /NJS /NC /NS | Out-Null
+    if ($LASTEXITCODE -ge 8) { throw "robocopy install failed (exit $LASTEXITCODE)" }
+} else {
+    if (-not (Test-Path (Join-Path $InstallPath "backend\app\main.py"))) {
+        throw "SkipFileCopy: missing backend at $(Join-Path $InstallPath 'backend'). Run MSI repair or full install."
+    }
 }
-New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
 
-# Never overwrite runtime DB in install/backend/data during app updates.
-robocopy $SourcePath $InstallPath /E /XD venv backend\data /NFL /NDL /NJH /NJS /NC /NS | Out-Null
-if ($LASTEXITCODE -ge 8) { throw "robocopy install failed (exit $LASTEXITCODE)" }
+New-Item -ItemType Directory -Path (Join-Path $InstallPath "backend\data") -Force | Out-Null
 
 $VenvPath = Join-Path $InstallPath "venv"
 $BackendPath = Join-Path $InstallPath "backend"

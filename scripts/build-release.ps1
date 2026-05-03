@@ -56,6 +56,7 @@ Copy-Item (Join-Path $RepoRoot "scripts\install-windows.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\uninstall-windows.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Write-StartDashboardBat.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Run-Dashboard.ps1") $OutScripts -Force
+Copy-Item (Join-Path $RepoRoot "scripts\Install-AfterMsi.ps1") $OutScripts -Force
 
 $readme = @"
 Install (PowerShell, normal user):
@@ -79,6 +80,12 @@ Start app: double-click Start-Dashboard.bat in the install folder, or
 Recreate the .bat only: .\scripts\Write-StartDashboardBat.ps1
 
 Server log (stdout/stderr): InstallPath\logs\server.log
+
+MSI (GitHub Releases): installs under
+  %LOCALAPPDATA%\Programs\FineNetDash\
+After install, run once (finishes venv + Task Scheduler):
+  powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1"
+Or from that folder:  .\scripts\Install-AfterMsi.ps1
 "@
 $readme | Set-Content -Path (Join-Path $OutRoot "INSTALL.txt") -Encoding UTF8
 

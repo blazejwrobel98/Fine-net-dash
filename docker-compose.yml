@@ -1,0 +1,15 @@
+services:
+  web:
+    build: .
+    image: fine-net-dash:local
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:////app/backend/data/portfolio.db
+      SKIP_SCHEDULER: "0"
+    volumes:
+      - appdata:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  appdata:
