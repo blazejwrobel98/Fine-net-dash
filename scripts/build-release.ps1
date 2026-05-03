@@ -97,3 +97,6 @@ if ($Zip) {
 }
 
 Write-Host "Done: $OutRoot"
+# Robocopy uses 0-7 for success (e.g. 1 = copied files). Without this, the script
+# process exit code stays non-zero and CI marks the step as failed.
+exit 0

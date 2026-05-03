@@ -210,3 +210,6 @@ if (-not $NoStartNow) {
         Write-Warning "Could not start task immediately: $_"
     }
 }
+
+# Robocopy success often leaves $LASTEXITCODE 1-7; avoid misleading non-zero script exit in CI.
+exit 0
