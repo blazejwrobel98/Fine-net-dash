@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -36,7 +36,7 @@ def timeline_payload(db: Session) -> dict:
         for s in snaps
     ]
     live = wallet_summary_dict(db)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     if not equity_series:
         equity_series.append(_equity_point_from_summary(live, now))
     else:

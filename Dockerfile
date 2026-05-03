@@ -27,14 +27,19 @@ RUN rm -rf /app/backend/tests /app/backend/__pycache__ /app/backend/.pytest_cach
 
 COPY --from=frontend-build /src/dist /app/frontend/dist
 
-RUN mkdir -p /app/backend/data
+RUN mkdir -p /app/backend/data \
+    && groupadd --system app \
+    && useradd --system --gid app --home-dir /app --no-create-home app \
+    && chown -R app:app /app
 
 WORKDIR /app/backend
+USER app
+
 LABEL org.opencontainers.image.title="Fine Net Dash" \
-      org.opencontainers.image.description="Dividend portfolio dashboard" \
+      org.opencontainers.image.description="Portfel dywidendowy (pre-alfa)" \
       org.opencontainers.image.source="https://github.com/blazejwrobel98/Fine-net-dash"
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD curl -fsS "http://127.0.0.1:8000/api/health" >/dev/null || exit 1
+    CMD-SHELL curl -fsS "http://127.0.0.1:$${PORT}/api/health" >/dev/null || exit 1
 
 CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host \"${HOST}\" --port \"${PORT}\""]

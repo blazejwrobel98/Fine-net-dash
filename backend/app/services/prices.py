@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from random import uniform
 from urllib.parse import quote
 
@@ -285,7 +285,7 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
             failed.append(ticker)
             continue
         row = db.execute(select(PriceCache).where(PriceCache.ticker == ticker)).scalar_one_or_none()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if row:
             row.price = m["price"]
             row.currency = m["currency"]

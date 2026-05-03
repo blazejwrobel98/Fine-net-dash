@@ -36,22 +36,28 @@ chmod +x "${STAGE}/FineNetDash/scripts/install-linux.sh"
 
 cp "${ROOT}/LICENSE" "${STAGE}/FineNetDash/" 2>/dev/null || true
 cp "${ROOT}/README.md" "${STAGE}/FineNetDash/" 2>/dev/null || true
+if [[ -f "${ROOT}/docs/Zastrzezenia-prawne.md" ]]; then
+  cp "${ROOT}/docs/Zastrzezenia-prawne.md" "${STAGE}/FineNetDash/"
+fi
 
 cat >"${STAGE}/FineNetDash/INSTALL.linux.txt" <<'EOF'
-Fine Net Dash — Linux (portable)
+Fine Net Dash — Linux (paczka przenośna, pre-alfa)
 
-1. Extract this archive anywhere.
-2. Install Python 3.11+ and Node is NOT required on the target machine (frontend is prebuilt).
-3. Run:
+1. Rozpakuj archiwum w dowolnym katalogu (np. w swoim katalogu domowym).
+2. Na komputerze docelowym potrzebny jest tylko Python 3.11+ (frontend jest juz zbudowany w paczce).
+3. Uruchom instalacje:
      cd FineNetDash/scripts
      ./install-linux.sh
 
-   Optional: SKIP_SYSTEMD=1 ./install-linux.sh   (venv only, no systemd unit)
-   Optional: PORT=8080 ./install-linux.sh
+   Opcjonalnie: SKIP_SYSTEMD=1 ./install-linux.sh  (tylko venv, bez unitu systemd)
+   Opcjonalnie: PORT=8080 ./install-linux.sh
 
-4. Open http://127.0.0.1:8000/ (default PORT=8000).
+4. Otworz http://127.0.0.1:8000/ (domyslnie PORT=8000).
 
-Database: backend/data/portfolio.db (created on first run).
+Baza danych: backend/data/portfolio.db (utworzy sie przy pierwszym uruchomieniu).
+
+Uwaga: zalecamy uzycie lokalne / w zaufanej sieci — aplikacja nie ma wbudowanego logowania do API.
+Zastrzezenia prawne: plik Zastrzezenia-prawne.md (jesli dolaczony).
 EOF
 
 OUT="${ROOT}/release/FineNetDash-linux-amd64.tar.gz"

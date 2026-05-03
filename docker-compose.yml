@@ -1,3 +1,4 @@
+# Lokalne uruchomienie. Nie wystawiaj portu publicznie bez reverse proxy i zabezpieczeń.
 services:
   web:
     build: .
@@ -7,6 +8,7 @@ services:
     environment:
       DATABASE_URL: sqlite:////app/backend/data/portfolio.db
       SKIP_SCHEDULER: "0"
+      # ENABLE_OPENAPI: "1"
     volumes:
       - appdata:/app/backend/data
     restart: unless-stopped

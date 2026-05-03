@@ -57,35 +57,40 @@ Copy-Item (Join-Path $RepoRoot "scripts\uninstall-windows.ps1") $OutScripts -For
 Copy-Item (Join-Path $RepoRoot "scripts\Write-StartDashboardBat.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Run-Dashboard.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Install-AfterMsi.ps1") $OutScripts -Force
+Copy-Item (Join-Path $RepoRoot "scripts\Dokoncz-instalacje-msi.bat") $OutScripts -Force
+$legalSrc = Join-Path $RepoRoot "docs\Zastrzezenia-prawne.md"
+if (Test-Path $legalSrc) {
+    Copy-Item $legalSrc (Join-Path $OutRoot "Zastrzezenia-prawne.md") -Force
+}
 
 $readme = @"
-Install (PowerShell, normal user):
+Instalacja (Windows, zwykły użytkownik, PowerShell)
 
   cd scripts
   .\install-windows.ps1 -InstallPath "$env:LOCALAPPDATA\DividendPortfolio"
 
-Source folder defaults to: release\DividendPortfolio (next to repo).
-App runs at Windows logon (Task Scheduler).
-Browser: http://127.0.0.1:8000/
+Źródło plików: domyślnie folder release\DividendPortfolio (obok repo) albo wskaż -SourcePath.
+Aplikacja: harmonogram zadań przy logowaniu + http://127.0.0.1:8000/
 
-Uninstall:
+Deinstalacja:
   .\uninstall-windows.ps1
 
-Database: if you run install from the repo (scripts next to backend/), your
-existing backend/data/portfolio.db is copied into the install when the target
-has no purchase lots yet. Or use -MigrateDbFrom "D:\path\to\portfolio.db".
+Baza portfolio.db: przy instalacji z repo skrypt może skopiować backend\data\portfolio.db,
+jeśli docelowy katalog jest pusty. Parametr -MigrateDbFrom ""ścieżka\portfolio.db"".
 
-Start app: double-click Start-Dashboard.bat in the install folder, or
+Start: Start-Dashboard.bat w folderze instalacji lub:
   Start-ScheduledTask -TaskName DividendPortfolio
-Recreate the .bat only: .\scripts\Write-StartDashboardBat.ps1
+Ponowne wygenerowanie .bat: .\scripts\Write-StartDashboardBat.ps1
 
-Server log (stdout/stderr): InstallPath\logs\server.log
+Log serwera: InstallPath\logs\server.log
 
-MSI (GitHub Releases): installs under
-  %LOCALAPPDATA%\Programs\FineNetDash\
-After install, run once (finishes venv + Task Scheduler):
-  powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1"
-Or from that folder:  .\scripts\Install-AfterMsi.ps1
+Instalator MSI (np. z GitHub Releases)
+  Pliki trafiają do: %LOCALAPPDATA%\Programs\FineNetDash\
+  Po MSI uruchom RAZ (venv + pip + harmonogram):
+    — dwuklik: scripts\Dokoncz-instalacje-msi.bat
+    albo: powershell -ExecutionPolicy Bypass -File ""%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1""
+
+Zastrzeżenia prawne: plik Zastrzezenia-prawne.md w tym folderze (jeśli dołączony do paczki).
 "@
 $readme | Set-Content -Path (Join-Path $OutRoot "INSTALL.txt") -Encoding UTF8
 

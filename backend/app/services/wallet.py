@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import datetime, time, timezone
 from typing import Any
 
 from sqlalchemy import func, select
@@ -112,17 +112,17 @@ def wallet_summary_dict(db: Session) -> dict[str, Any]:
 
 def upsert_today_snapshot(db: Session) -> None:
     summ = wallet_summary_dict(db)
-    # Spójnie z recorded_at = utcnow() — date.today() (lokalna) psuje okno „dziś”.
-    today = datetime.utcnow().date()
-    start = datetime.combine(today, time.min)
-    end = datetime.combine(today, time.max)
+    # Data „dziś” w UTC — spójnie z zapisem snapshotów (timezone-aware).
+    now = datetime.now(timezone.utc)
+    today = now.date()
+    start = datetime.combine(today, time.min, tzinfo=timezone.utc)
+    end = datetime.combine(today, time.max, tzinfo=timezone.utc)
     row = db.execute(
         select(PortfolioSnapshot).where(
             PortfolioSnapshot.recorded_at >= start,
             PortfolioSnapshot.recorded_at <= end,
         )
     ).scalar_one_or_none()
-    now = datetime.utcnow()
     if row:
         row.holdings_value_pln = summ["holdings_market_pln"]
         row.cash_pln = summ["cash_available_pln"]

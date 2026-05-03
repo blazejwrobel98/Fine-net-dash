@@ -7,6 +7,12 @@ def test_health(client):
     assert r.json()["ok"] is True
 
 
+def test_openapi_hidden_by_default(client):
+    assert client.get("/docs").status_code == 404
+    assert client.get("/redoc").status_code == 404
+    assert client.get("/openapi.json").status_code == 404
+
+
 def test_universe_matches_seed(client):
     r = client.get("/api/universe")
     assert r.status_code == 200

@@ -1,148 +1,151 @@
-# Fine net dash / portfel dywidendowy
+# Fine Net Dash — portfel dywidendowy
 
-Web app for a manual dividend portfolio: universe of dividend stocks, purchase lots (including fractional), average cost, Yahoo Finance prices (`yfinance`), and optional ntfy alerts when price drops below your threshold.
+**Wersja robocza (pre-alfa).** Aplikacja webowa do ręcznego prowadzenia portfela dywidendowego: lista spółek, loty (także ułamkowe), średnia cena kupna, ceny z Yahoo Finance (`yfinance`), opcjonalne alerty ntfy.
 
-Repository: [github.com/blazejwrobel98/Fine-net-dash](https://github.com/blazejwrobel98/Fine-net-dash)
+Repozytorium: [github.com/blazejwrobel98/Fine-net-dash](https://github.com/blazejwrobel98/Fine-net-dash)  
+Licencja: [MIT](LICENSE) — bez gwarancji.
 
-**License:** [MIT](LICENSE) — use and run the project freely; no warranty.
-
-## Stable releases (Docker, Linux, Windows)
-
-Tag a version as `v*` (example `v0.2.0`) and push it. GitHub Actions **Release** workflow then:
-
-| Artifact | Use case |
-|----------|-----------|
-| **Docker** | `docker pull ghcr.io/blazejwrobel98/fine-net-dash:v0.2.0` then `docker run -p 8000:8000 -v fine-data:/app/backend/data ghcr.io/blazejwrobel98/fine-net-dash:v0.2.0` — or use this repo’s `docker compose up --build` for a local image `fine-net-dash:local`. |
-| **Linux** | Download `FineNetDash-linux-amd64.tar.gz` from [Releases](https://github.com/blazejwrobel98/Fine-net-dash/releases), extract, run `cd FineNetDash/scripts && ./install-linux.sh` (optional `SKIP_SYSTEMD=1`). |
-| **Windows** | **ZIP:** unzip `DividendPortfolio.zip`, follow `INSTALL.txt` / `scripts\install-windows.ps1`. **MSI:** installs under `%LOCALAPPDATA%\Programs\FineNetDash\` — then run once: `powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1"` (venv + Task Scheduler). |
-
-Maintainers: build the MSI with [WiX](https://wixtoolset.org/) **6.x** (WiX 7+ needs [OSMF](https://wixtoolset.org/osmf/) acceptance): `dotnet tool install --global wix --version 6.0.2`, then `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
-
-## What you need
-
-| Component | Version |
-|-----------|---------|
-| Python | 3.11+ (tested on 3.13) |
-| Node.js | 18+ (for the React frontend) |
-
-Optional: **XTB is not integrated** — you enter tickers as on Yahoo (e.g. `PZU.WA`, `KO`).
+Interfejs użytkownika jest **po polsku**. Krótkie zastrzeżenia prawne: [docs/Zastrzezenia-prawne.md](docs/Zastrzezenia-prawne.md).
 
 ---
 
-## Run locally (recommended for development)
+## Dla kogo i jak wdrażamy
 
-You run **two processes**: API (FastAPI) and the Vite dev server (UI with hot reload).
+Projekt jest pisany z myślą o **samodzielnej instalacji u siebie** (komputer domowy, Docker na własnym hoście, sieć lokalna). **Na ten moment zalecamy wyłącznie lokalne lub zaufane wdrożenia** — nie hostuj publicznie w otwartym internecie bez dodatkowej warstwy zabezpieczeń (reverse proxy, firewall, VPN), o ile w ogóle.
 
-### 1. Backend
+**Nie prowadzimy centralnego SaaS** — nie zbieramy Twojego portfela po stronie serwera projektu; dane siedzą u Ciebie (np. plik SQLite). Dlatego **nie publikujemy osobnej polityki prywatności usługi chmurowej** — patrz też [Zastrzezenia prawne](docs/Zastrzezenia-prawne.md).
 
-**Windows (PowerShell)**
+---
+
+## Bezpieczeństwo (ważne)
+
+- **API nie ma logowania użytkownika** — każdy, kto ma sieciowy dostęp do adresu backendu, może wykonywać operacje API. Traktuj instalację jak narzędzie **tylko dla siebie** lub w sieci, którą kontrolujesz.
+- Domyślnie **wyłączone są** strony dokumentacji OpenAPI (`/docs`, `/redoc`, `/openapi.json`). Włączenie: zmienna środowiskowa `ENABLE_OPENAPI=1` (np. przy debugowaniu).
+- Do odpowiedzi dodawane są podstawowe **nagłówki bezpieczeństwa** (m.in. `X-Frame-Options`, `X-Content-Type-Options`).
+- Opcjonalnie: **`TRUSTED_HOSTS`** — lista hostów po przecinku (np. za reverse proxy); puste = wyłączone.
+
+Zgłaszanie problemów bezpieczeństwa: [SECURITY.md](SECURITY.md).
+
+---
+
+## Wymagania
+
+| Składnik  | Wersja        |
+| ---------- | ------------- |
+| Python     | 3.11+         |
+| Node.js    | 18+ (tylko build frontu) |
+
+XTB **nie jest podłączone** — wpisujesz tickery jak w Yahoo (np. `PZU.WA`, `KO`).
+
+---
+
+## Uruchomienie deweloperskie (dwa procesy)
+
+**Backend** (PowerShell):
 
 ```powershell
 cd backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Copy-Item .env.example .env   # optional
+copy .env.example .env   # opcjonalnie
+$env:ENABLE_OPENAPI = "1"   # opcjonalnie: włącz /docs
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-**Linux / macOS**
+**Frontend** (drugi terminal):
 
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env   # optional
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
-```
-
-- REST API: `http://127.0.0.1:8000/api/...`
-- Set `SKIP_SCHEDULER=1` in `.env` or the environment if you want no background jobs (e.g. focused debugging).
-
-### 2. Frontend (separate terminal)
-
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173** — Vite proxies `/api` to `http://127.0.0.1:8000`.
+Aplikacja w przeglądarce: **http://127.0.0.1:5173** (proxy `/api` → port 8000).
+
+**Linux/macOS:** analogicznie z `python3 -m venv` i `source .venv/bin/activate`.
 
 ---
 
-## Run as a single server (production-style)
-
-Build the SPA so FastAPI can serve `frontend/dist` from the same port.
+## Jedna usługa (build frontu + backend)
 
 ```bash
 cd frontend && npm install && npm run build
 cd ../backend
-# activate venv as above
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+# aktywuj venv
+uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
-Then open `http://127.0.0.1:8000/` (or `http://<your-LAN-IP>:8000` from another device on the network).
+Dashboard: `http://127.0.0.1:8000/`.
 
 ---
 
-## Configuration
-
-Copy `backend/.env.example` to `backend/.env` and edit. All variables are optional; defaults use SQLite at `backend/data/portfolio.db` and sensible CORS for local Vite.
-
----
-
-## Windows: install as a user app (Task Scheduler + log)
-
-**From the repo:** build the frontend once, then run the installer (it copies `backend/` and `frontend/dist/` into your install directory):
-
-```powershell
-cd frontend
-npm install
-npm run build
-cd ..\scripts
-.\install-windows.ps1
-```
-
-**From a release package:** after `.\scripts\build-release.ps1`, open `release\DividendPortfolio` and follow `INSTALL.txt`, or run `.\install-windows.ps1` from that folder’s `scripts` subfolder.
-
-Server logs when using `Run-Dashboard.ps1`: `%LOCALAPPDATA%\DividendPortfolio\logs\server.log` (default install path).
-
----
-
-## iPhone alerts (ntfy)
-
-1. Install [ntfy](https://ntfy.sh/) from the App Store.
-2. Subscribe to a **unique**, hard-to-guess topic.
-3. In the dashboard → **Alerty i ustawienia**, enter the same topic (and optional self-hosted ntfy URL).
-4. Backend refreshes prices on a schedule and POSTs to ntfy when price ≤ average × (1 − threshold%). There is a **~6 h cooldown** per ticker to reduce spam.
-
----
-
-## Tests
-
-```powershell
-cd backend
-$env:SKIP_SCHEDULER = "1"   # PowerShell
-python -m pytest tests -v
-```
+## Docker
 
 ```bash
+docker compose up --build
+```
+
+Obraz działa jako **użytkownik nieuprzywilejowany** (`app`). Wolumen: dane SQLite w `/app/backend/data`.
+
+---
+
+## Paczki stabilne (GitHub Releases)
+
+Po wypchnięciu tagu `v*` (np. `v0.2.0`) CI buduje m.in.:
+
+| Artefakt      | Opis |
+| ------------- | ---- |
+| Obraz Docker  | `ghcr.io/blazejwrobel98/fine-net-dash:<tag>` |
+| Linux `.tar.gz` | Paczka przenośna + `scripts/install-linux.sh` |
+| Windows       | ZIP (`install-windows.ps1`) oraz MSI (per-user); po MSI **jednorazowo** uruchom `scripts\Dokoncz-instalacje-msi.bat` lub `Install-AfterMsi.ps1`. |
+
+**MSI lokalnie:** [WiX](https://wixtoolset.org/) w wersji **6.x** (np. `dotnet tool install --global wix --version 6.0.2`), potem `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
+
+---
+
+## Konfiguracja (`backend/.env`)
+
+Skopiuj `backend/.env.example` → `backend/.env`. Dla testów CI / pytest: `SKIP_SCHEDULER=1`.
+
+---
+
+## Powiadomienia (ntfy, iPhone)
+
+1. Aplikacja [ntfy](https://ntfy.sh/) z App Store.  
+2. Unikalny, trudny temat subskrypcji.  
+3. W aplikacji → **Alerty i ustawienia** — ten sam temat (opcjonalnie własny serwer ntfy).  
+4. Backend okresowo odświeża ceny; przy spełnionym progu wysyła POST do ntfy. **Cooldown ~6 h** na ticker.
+
+---
+
+## Testy
+
+```powershell
 cd backend
-export SKIP_SCHEDULER=1
+$env:SKIP_SCHEDULER = "1"
 python -m pytest tests -v
 ```
 
----
-
-## Notes
-
-- Yahoo data can be temporarily unavailable (network, rate limits); the UI may show "—" for a price.
-- The stock universe is a starting set (PL / EU / US); you can extend it in code or via future tooling.
+Frontend: `npm run build` w katalogu `frontend` (uruchamiane w CI).
 
 ---
 
-## License
+## Wkład i zgłoszenia
 
-[MIT](LICENSE) — Copyright (c) 2026 blazejwrobel98.
+- Wkład w kod: [CONTRIBUTING.md](CONTRIBUTING.md)  
+- Błędy i pomysły: **Issues** w tym repozytorium  
+- Bezpieczeństwo: [SECURITY.md](SECURITY.md)
+
+---
+
+## Uwagi techniczne
+
+- Dane Yahoo bywają chwilowo niedostępne — w UI może pojawić się „—”.  
+- Lista spółek to punkt wyjścia; możesz ją rozszerzać w kodzie.
+
+---
+
+## Historia wersji
+
+Skrót zmian: [CHANGELOG.md](CHANGELOG.md). Szczegóły buildów: [GitHub Releases](https://github.com/blazejwrobel98/Fine-net-dash/releases).

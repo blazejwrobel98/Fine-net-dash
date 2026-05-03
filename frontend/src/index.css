@@ -209,6 +209,20 @@ button.th-sort .sort-ind {
   color: #fcd34d;
 }
 
+.pre-alpha-banner {
+  margin-bottom: 1rem;
+  padding: 0.65rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent-dim);
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.pre-alpha-banner strong {
+  color: var(--accent);
+}
+
 .muted {
   color: var(--muted);
   font-size: 0.85rem;

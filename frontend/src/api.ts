@@ -164,10 +164,36 @@ export type BackupActionResponse = {
   records?: number | null;
 };
 
+function formatApiError(status: number, statusText: string, raw: string): string {
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) {
+    return `Serwer zwrócił błąd ${status} (${statusText || "bez opisu"}).`;
+  }
+  if (trimmed.includes("<!DOCTYPE") || trimmed.includes("<html")) {
+    return `Serwer zwrócił błąd ${status}. Sprawdź logi backendu lub spróbuj ponownie za chwilę.`;
+  }
+  if (status === 422 && trimmed.startsWith("{")) {
+    try {
+      const o = JSON.parse(trimmed) as { detail?: unknown };
+      if (Array.isArray(o.detail)) {
+        return o.detail
+          .map((d: unknown) => (typeof d === "object" && d && "msg" in d ? String((d as { msg: string }).msg) : JSON.stringify(d)))
+          .join("; ");
+      }
+    } catch {
+      /* fall through */
+    }
+  }
+  if (trimmed.length > 400) {
+    return `${trimmed.slice(0, 397)}…`;
+  }
+  return trimmed;
+}
+
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const t = await res.text();
-    throw new Error(t || res.statusText);
+    const raw = await res.text();
+    throw new Error(formatApiError(res.status, res.statusText, raw));
   }
   return res.json() as Promise<T>;
 }

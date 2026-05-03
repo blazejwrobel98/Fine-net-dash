@@ -44,7 +44,7 @@ def check_and_notify_sync(db: Session) -> tuple[int, list[str], list[str]]:
         return 0, [], ["Brak zapisanych zakupów — dodaj lot w zakładce „Pozycje i zakupy”. Test „ping” ntfy jest w osobnym przycisku."]
 
     prices = get_cached_map(db, tickers)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     sent = 0
     skipped: list[str] = []
 

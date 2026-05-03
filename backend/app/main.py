@@ -9,6 +9,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -41,6 +42,7 @@ from app.schemas import (
     WalletSummaryOut,
 )
 from app.seed_universe import ensure_default_settings, seed_universe_if_empty, sync_universe_additions
+from app.security_middleware import SecurityHeadersMiddleware
 from app.services.alerts import check_and_notify_sync, send_ntfy_test_ping
 from app.services.backups import (
     backup_portfolio_now,
@@ -220,7 +222,14 @@ async def lifespan(app: FastAPI):
         scheduler.shutdown(wait=False)
 
 
-app = FastAPI(title="Dividend Portfolio Tracker", lifespan=lifespan)
+_openapi = "/docs" if settings.enable_openapi else None
+app = FastAPI(
+    title="Portfel dywidendowy",
+    lifespan=lifespan,
+    docs_url=_openapi,
+    redoc_url="/redoc" if settings.enable_openapi else None,
+    openapi_url="/openapi.json" if settings.enable_openapi else None,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -229,6 +238,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_th = [h.strip() for h in settings.trusted_hosts.split(",") if h.strip()]
+if _th:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_th)
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 
 def get_settings_row(db: Session) -> AppSettings:

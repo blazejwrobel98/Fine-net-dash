@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, DateTime, Float, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UniverseStock(Base):
@@ -26,7 +30,7 @@ class PurchaseLot(Base):
     quantity: Mapped[float] = mapped_column(Float, nullable=False)
     price_per_share: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
-    purchased_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    purchased_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
 
 
 class SaleTransaction(Base):
@@ -40,7 +44,7 @@ class SaleTransaction(Base):
     proceeds_pln: Mapped[float] = mapped_column(Float, nullable=False)
     cost_basis_pln: Mapped[float] = mapped_column(Float, nullable=False)
     realized_pln: Mapped[float] = mapped_column(Float, nullable=False)
-    sold_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    sold_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
 
 
 class AppSettings(Base):
@@ -67,7 +71,7 @@ class PriceCache(Base):
     ticker: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     price: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, onupdate=_utc_now)
     dividend_yield_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     change_1d_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     change_1w_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -96,7 +100,7 @@ class CashDeposit(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     amount_pln: Mapped[float] = mapped_column(Float, nullable=False)
-    received_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
@@ -106,7 +110,7 @@ class DividendReceipt(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     ticker: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
     amount_pln: Mapped[float] = mapped_column(Float, nullable=False)
-    received_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    received_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
@@ -114,7 +118,7 @@ class PortfolioSnapshot(Base):
     __tablename__ = "portfolio_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, index=True)
     holdings_value_pln: Mapped[float] = mapped_column(Float, nullable=False)
     cash_pln: Mapped[float] = mapped_column(Float, nullable=False)
     total_equity_pln: Mapped[float] = mapped_column(Float, nullable=False)

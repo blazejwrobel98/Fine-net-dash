@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     portfolio_backup_versions: int = 3
     # Dzienny przyrostowy backup historii cen — retencja (dni).
     price_backup_keep_days: int = 120
+    # Dokumentacja OpenAPI (/docs) — domyślnie wyłączona (bezpieczniejszy self-host). Dev: ENABLE_OPENAPI=1
+    enable_openapi: bool = False
+    # Ograniczenie nagłówka Host (np. za reverse proxy). Puste = wyłączone. Przykład: TRUSTED_HOSTS=localhost,127.0.0.1,app.example.com
+    trusted_hosts: str = ""
 
 
 settings = Settings()

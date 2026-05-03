@@ -213,7 +213,14 @@ export default function App() {
     api
       .health()
       .then(() => loadCore())
-      .catch((e: Error) => setErr(e.message))
+      .catch((e: unknown) => {
+        const msg = e instanceof Error ? e.message : String(e);
+        setErr(
+          msg.includes("Failed to fetch") || msg.includes("NetworkError")
+            ? "Brak połączenia z serwerem (sprawdź, czy backend działa i czy adres w przeglądarce jest poprawny)."
+            : msg,
+        );
+      })
       .finally(() => setLoading(false));
   }, [loadCore]);
 
@@ -452,11 +459,15 @@ export default function App() {
 
   return (
     <>
+      <div className="pre-alpha-banner" role="status">
+        <strong>Wersja robocza (pre-alfa).</strong> Uruchamiaj lokalnie lub w zaufanej sieci — nie udostępniaj
+        publicznie w internecie bez zabezpieczeń (brak logowania do API). Zobacz też dokumentację w repozytorium.
+      </div>
       <header>
         <h1>Portfel dywidendowy</h1>
         <p>
-          Defensywne spółki dywidendowe, loty z XTB (PLN), portfel gotówkowy, wykresy. Ceny Yahoo — odśwież, żeby
-          zobaczyć zmiany i snapshot na timeline.
+          Lista spółek dywidendowych, ręczne loty (w tym ułamkowe), portfel PLN, wykresy. Ceny z Yahoo Finance —
+          użyj „Odśwież ceny”, żeby zaktualizować dane i oś czasu portfela.
         </p>
       </header>
 
