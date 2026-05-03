@@ -6,8 +6,11 @@
   MSI product version (four numeric parts), e.g. 0.2.0.0
 
 .EXAMPLE
-  dotnet tool install --global wix
+  dotnet tool install --global wix --version 6.0.2
   .\packaging\windows\build-msi.ps1 -Version 0.2.0.0
+
+.NOTES
+  Use WiX 6.x locally; WiX 7+ requires accepting the OSMF EULA (see https://wixtoolset.org/osmf/).
 #>
 param(
     [string]$Version = "0.1.0.0",
@@ -23,7 +26,7 @@ $wxsWork = Join-Path $here "obj\Package.gen.wxs"
 $msiOut = Join-Path $repoRoot "release\FineNetDash.msi"
 
 if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
-    throw "WiX CLI not found. Install: dotnet tool install --global wix`nThen add %USERPROFILE%\.dotnet\tools to PATH."
+    throw "WiX CLI not found. Install: dotnet tool install --global wix --version 6.0.2`nThen add %USERPROFILE%\.dotnet\tools to PATH."
 }
 
 if (-not $SkipReleaseBuild) {

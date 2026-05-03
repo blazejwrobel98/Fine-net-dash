@@ -16,7 +16,7 @@ Tag a version as `v*` (example `v0.2.0`) and push it. GitHub Actions **Release**
 | **Linux** | Download `FineNetDash-linux-amd64.tar.gz` from [Releases](https://github.com/blazejwrobel98/Fine-net-dash/releases), extract, run `cd FineNetDash/scripts && ./install-linux.sh` (optional `SKIP_SYSTEMD=1`). |
 | **Windows** | **ZIP:** unzip `DividendPortfolio.zip`, follow `INSTALL.txt` / `scripts\install-windows.ps1`. **MSI:** installs under `%LOCALAPPDATA%\Programs\FineNetDash\` — then run once: `powershell -ExecutionPolicy Bypass -File "%LOCALAPPDATA%\Programs\FineNetDash\scripts\Install-AfterMsi.ps1"` (venv + Task Scheduler). |
 
-Maintainers: build the MSI locally with [WiX](https://wixtoolset.org/) (`dotnet tool install --global wix`), then `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
+Maintainers: build the MSI with [WiX](https://wixtoolset.org/) **6.x** (WiX 7+ needs [OSMF](https://wixtoolset.org/osmf/) acceptance): `dotnet tool install --global wix --version 6.0.2`, then `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
 
 ## What you need
 
