@@ -45,7 +45,8 @@ LABEL org.opencontainers.image.title="Fine Net Dash" \
       org.opencontainers.image.description="Portfel dywidendowy (pre-alfa)" \
       org.opencontainers.image.source="https://github.com/blazejwrobel98/Fine-net-dash"
 EXPOSE 8000
+# CMD (not CMD-SHELL): required by docker/dockerfile:1 + buildx parser.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-    CMD-SHELL curl -fsS "http://127.0.0.1:$${PORT}/api/health" >/dev/null || exit 1
+    CMD curl -fsS http://127.0.0.1:8000/api/health -o /dev/null
 
 CMD ["sh", "-c", "exec python -m uvicorn app.main:app --host \"${HOST}\" --port \"${PORT}\""]
