@@ -20,6 +20,7 @@ Projekt jest pisany z myślą o **samodzielnej instalacji u siebie** (komputer d
 ## Bezpieczeństwo (ważne)
 
 - **API nie ma logowania użytkownika** — każdy, kto ma sieciowy dostęp do adresu backendu, może wykonywać operacje API. Traktuj instalację jak narzędzie **tylko dla siebie** lub w sieci, którą kontrolujesz.
+- **`GET /api/version`** — zwraca numer wersji i opcjonalnie skrót SHA buildu (w Dockerze z CI ustawiane przez `APP_VERSION` / `GIT_SHA`). W UI (żółty pasek u góry) widać **„Build backendu”**, żeby nie mylić starej instalacji z nową.
 - Domyślnie **wyłączone są** strony dokumentacji OpenAPI (`/docs`, `/redoc`, `/openapi.json`). Włączenie: zmienna środowiskowa `ENABLE_OPENAPI=1` (np. przy debugowaniu).
 - Do odpowiedzi dodawane są podstawowe **nagłówki bezpieczeństwa** (m.in. `X-Frame-Options`, `X-Content-Type-Options`).
 - Opcjonalnie: **`TRUSTED_HOSTS`** — lista hostów po przecinku (np. za reverse proxy); puste = wyłączone.

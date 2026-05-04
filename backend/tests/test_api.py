@@ -13,6 +13,15 @@ def test_openapi_hidden_by_default(client):
     assert client.get("/openapi.json").status_code == 404
 
 
+def test_version_endpoint(client):
+    r = client.get("/api/version")
+    assert r.status_code == 200
+    data = r.json()
+    assert "version" in data
+    assert isinstance(data["version"], str)
+    assert len(data["version"]) > 0
+
+
 def test_universe_matches_seed(client):
     r = client.get("/api/universe")
     assert r.status_code == 200

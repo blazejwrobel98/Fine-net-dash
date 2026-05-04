@@ -259,6 +259,15 @@ def health():
     return {"ok": True}
 
 
+@app.get("/api/version")
+def api_version():
+    """Żeby w UI było widać, który dokładnie build odpowiada (bez zgadywania po plikach)."""
+    from app.version_info import app_version, git_sha
+
+    sha = git_sha()
+    return {"version": app_version(), "git_sha": sha if sha else None}
+
+
 @app.get("/api/universe", response_model=UniverseListResponse)
 def list_universe(
     region: str | None = None,

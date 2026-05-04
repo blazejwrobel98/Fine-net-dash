@@ -14,6 +14,8 @@ Dzięki za zainteresowanie **Fine Net Dash** (wersja robocza / pre-alfa).
 3. Testy backendu: `SKIP_SCHEDULER=1 pytest backend/tests -v` (z katalogu `backend`).  
 4. Build frontu: `npm run build` w `frontend`.
 
+Przy wydaniu sensowne jest podbić `backend/app/version_info.py` (`_DEFAULT_VERSION`), żeby lokalne uruchomienie bez `APP_VERSION` pokazywało aktualny numer.
+
 ## Pull requesty
 
 - Jedna logiczna zmiana na PR, opis po polsku lub angielsku — jasno napisz **co** i **dlaczego**.  

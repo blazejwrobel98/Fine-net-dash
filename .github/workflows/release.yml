@@ -32,6 +32,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            APP_VERSION=${{ github.ref_name }}
 
   linux-tarball:
     runs-on: ubuntu-latest

@@ -33,6 +33,12 @@ RUN mkdir -p /app/backend/data \
     && chown -R app:app /app
 
 WORKDIR /app/backend
+
+ARG APP_VERSION=0.2.0-pre.1
+ARG GIT_SHA=unknown
+ENV APP_VERSION=$APP_VERSION
+ENV GIT_SHA=$GIT_SHA
+
 USER app
 
 LABEL org.opencontainers.image.title="Fine Net Dash" \

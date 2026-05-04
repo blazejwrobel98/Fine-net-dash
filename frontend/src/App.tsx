@@ -191,6 +191,7 @@ export default function App() {
   const [pricesBackups, setPricesBackups] = useState<BackupFile[]>([]);
   const [selectedPortfolioBackup, setSelectedPortfolioBackup] = useState<string>("");
   const [selectedPricesBackup, setSelectedPricesBackup] = useState<string>("");
+  const [serverBuild, setServerBuild] = useState<string | null>(null);
 
   const loadCore = useCallback(async () => {
     setErr(null);
@@ -206,6 +207,16 @@ export default function App() {
     setLots(l);
     setSettings(s);
     setSales(sl);
+  }, []);
+
+  useEffect(() => {
+    void api
+      .version()
+      .then((v) => {
+        const sha = v.git_sha && v.git_sha.length >= 7 ? v.git_sha.slice(0, 7) : null;
+        setServerBuild(sha ? `${v.version} · ${sha}` : v.version);
+      })
+      .catch(() => setServerBuild("nieznana (brak /api/version)"));
   }, []);
 
   useEffect(() => {
@@ -462,6 +473,10 @@ export default function App() {
       <div className="pre-alpha-banner" role="status">
         <strong>Wersja robocza (pre-alfa).</strong> Uruchamiaj lokalnie lub w zaufanej sieci — nie udostępniaj
         publicznie w internecie bez zabezpieczeń (brak logowania do API). Zobacz też dokumentację w repozytorium.
+        <br />
+        <span className="muted">
+          <strong>Build backendu:</strong> {serverBuild ?? "…"}
+        </span>
       </div>
       <header>
         <h1>Portfel dywidendowy</h1>
