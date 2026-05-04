@@ -79,6 +79,17 @@ if (-not $SkipFileCopy) {
         Write-Warning "Folder exists - files will merge; existing venv is kept if present."
     }
     New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
+    $preDb = Join-Path $InstallPath "backend\data\portfolio.db"
+    if (Test-Path -LiteralPath $preDb) {
+        $preStamp = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+        $preSnap = Join-Path $InstallPath "backend\data\portfolio.db.preinstall-$preStamp"
+        try {
+            Copy-Item -LiteralPath $preDb -Destination $preSnap -Force
+            Write-Host "Safety copy of existing portfolio.db -> $(Split-Path $preSnap -Leaf)"
+        } catch {
+            Write-Warning "Could not create pre-install DB safety copy: $_"
+        }
+    }
     # Never overwrite runtime DB in install/backend/data during app updates.
     robocopy $SourcePath $InstallPath /E /XD venv backend\data /NFL /NDL /NJH /NJS /NC /NS | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy install failed (exit $LASTEXITCODE)" }
