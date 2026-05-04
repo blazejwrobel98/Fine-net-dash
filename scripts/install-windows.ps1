@@ -74,6 +74,20 @@ if (Get-Command py -ErrorAction SilentlyContinue) {
 }
 
 Write-Host "Installing to: $InstallPath"
+
+# Zwolnij blokadę SQLite (uvicorn trzyma plik — robocopy potrafi „nadpisać” DB w niepełnym stanie).
+$existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+if ($existingTask) {
+    try {
+        Stop-ScheduledTask -TaskName $TaskName -ErrorAction Stop
+        Write-Host "Stopped scheduled task '$TaskName' before file update (releases portfolio.db lock)."
+        Start-Sleep -Seconds 3
+    } catch {
+        Write-Warning "Could not stop '$TaskName' before update; close the dashboard window if SQLite gets corrupted. $_"
+    }
+}
+
+$preSnap = $null
 if (-not $SkipFileCopy) {
     if (Test-Path $InstallPath) {
         Write-Warning "Folder exists - files will merge; existing venv is kept if present."
@@ -91,8 +105,30 @@ if (-not $SkipFileCopy) {
         }
     }
     # Never overwrite runtime DB in install/backend/data during app updates.
+    # Uwaga: /XD bywa zawodny w niektórych wersjach robocopy — po sync sprawdzamy hash i cofamy zmianę.
     robocopy $SourcePath $InstallPath /E /XD venv backend\data /NFL /NDL /NJH /NJS /NC /NS | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy install failed (exit $LASTEXITCODE)" }
+
+    if ($preSnap -and (Test-Path -LiteralPath $preSnap)) {
+        $preDbAfter = Join-Path $InstallPath "backend\data\portfolio.db"
+        try {
+            if (-not (Test-Path -LiteralPath $preDbAfter)) {
+                Copy-Item -LiteralPath $preSnap -Destination $preDbAfter -Force
+                Write-Warning "portfolio.db missing after robocopy — restored from preinstall snapshot."
+            } else {
+                $hSnap = (Get-FileHash -LiteralPath $preSnap -Algorithm SHA256).Hash
+                $hDb = (Get-FileHash -LiteralPath $preDbAfter -Algorithm SHA256).Hash
+                if ($hDb -ne $hSnap) {
+                    $clobber = Join-Path (Split-Path $preDbAfter) ("portfolio.db.robocopy-clobber-" + [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ"))
+                    Copy-Item -LiteralPath $preDbAfter -Destination $clobber -Force
+                    Copy-Item -LiteralPath $preSnap -Destination $preDbAfter -Force
+                    Write-Warning "portfolio.db changed during robocopy (saved clobbered file as $(Split-Path $clobber -Leaf)); restored from preinstall snapshot."
+                }
+            }
+        } catch {
+            Write-Warning "Could not verify/restore portfolio.db after robocopy: $_"
+        }
+    }
 } else {
     if (-not (Test-Path (Join-Path $InstallPath "backend\app\main.py"))) {
         throw "SkipFileCopy: missing backend at $(Join-Path $InstallPath 'backend'). Run MSI repair or full install."
