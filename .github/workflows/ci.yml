@@ -1,8 +1,8 @@
 name: CI
 
+# Każdy commit na dowolnej gałęzi + PR do main — ten sam zestaw co lokalnie.
 on:
   push:
-    branches: [main]
   pull_request:
     branches: [main]
 
@@ -19,12 +19,12 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: pip install -r requirements.txt
-      - name: Pytest
+      - name: Pytest (wszystkie testy, strict)
         env:
           SKIP_SCHEDULER: "1"
-        run: python -m pytest tests -v
+        run: python -m pytest tests -v --strict-markers
 
-  frontend-build:
+  frontend-check:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -37,4 +37,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
-      - run: npm run build
+      - name: TypeScript (bez emit)
+        run: npx tsc --noEmit
+      - name: Production build
+        run: npm run build
