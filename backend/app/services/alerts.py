@@ -11,6 +11,13 @@ from app.services.prices import fetch_price, get_cached_map
 COOLDOWN_HOURS = 6
 
 
+def _as_utc_aware(dt: datetime) -> datetime:
+    """Kolumna SQLite `DateTime` bez TZ zwraca naive — traktujemy jako UTC (spójnie z `datetime.now(timezone.utc)`)."""
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 def _ntfy_title(s: str) -> str:
     """Nagłówki HTTP muszą być Latin-1; httpx na Windows potrafi wymusić ASCII."""
     return s.replace("\u2014", "-").replace("\u2013", "-").encode("ascii", "replace").decode("ascii")
@@ -66,7 +73,7 @@ def check_and_notify_sync(db: Session) -> tuple[int, list[str], list[str]]:
             continue
 
         cd = db.execute(select(AlertCooldown).where(AlertCooldown.ticker == ticker)).scalar_one_or_none()
-        if cd and now - cd.last_sent_at < timedelta(hours=COOLDOWN_HOURS):
+        if cd and now - _as_utc_aware(cd.last_sent_at) < timedelta(hours=COOLDOWN_HOURS):
             skipped.append(f"{ticker}:cooldown")
             continue
 
@@ -86,10 +93,10 @@ def check_and_notify_sync(db: Session) -> tuple[int, list[str], list[str]]:
             continue
 
         if cd:
-            cd.last_sent_at = now
+            cd.last_sent_at = now.replace(tzinfo=None)
             cd.reference_avg_price = avg
         else:
-            db.add(AlertCooldown(ticker=ticker, last_sent_at=now, reference_avg_price=avg))
+            db.add(AlertCooldown(ticker=ticker, last_sent_at=now.replace(tzinfo=None), reference_avg_price=avg))
         sent += 1
 
     db.commit()
