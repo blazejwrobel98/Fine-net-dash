@@ -203,13 +203,16 @@ def _dividend_yield_from_history(h: pd.DataFrame, price: float) -> float | None:
     div = h["Dividends"].fillna(0)
     if div.empty:
         return None
-    # Trailing 12M yield: tylko wypłaty z ostatnich 365 dni, nie suma z całego 5Y.
-    last_ts = div.index.max()
-    cutoff = last_ts - pd.Timedelta(days=365)
-    total = float(div[div.index >= cutoff].sum())
-    if total <= 0:
+    positive = div[div > 0]
+    if positive.empty:
         return None
-    return round((total / price) * 100.0, 3)
+    # Roczna (kalendarzowa), nie trailing 12M:
+    # suma wypłat z ostatniego roku, w którym wystąpiła dywidenda.
+    latest_year = int(positive.index.max().year)
+    total_year = float(positive[positive.index.year == latest_year].sum())
+    if total_year <= 0:
+        return None
+    return round((total_year / price) * 100.0, 3)
 
 
 def _avg_close(closes: pd.Series, window: int) -> float | None:
