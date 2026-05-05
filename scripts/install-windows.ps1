@@ -114,19 +114,20 @@ if (-not $SkipFileCopy) {
         try {
             if (-not (Test-Path -LiteralPath $preDbAfter)) {
                 Copy-Item -LiteralPath $preSnap -Destination $preDbAfter -Force
-                Write-Warning "portfolio.db missing after robocopy — restored from preinstall snapshot."
+                Write-Warning "portfolio.db missing after robocopy - restored from preinstall snapshot."
             } else {
                 $hSnap = (Get-FileHash -LiteralPath $preSnap -Algorithm SHA256).Hash
                 $hDb = (Get-FileHash -LiteralPath $preDbAfter -Algorithm SHA256).Hash
                 if ($hDb -ne $hSnap) {
-                    $clobber = Join-Path (Split-Path $preDbAfter) ("portfolio.db.robocopy-clobber-" + [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ"))
+                    $clobberName = "portfolio.db.robocopy-clobber-" + [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+                    $clobber = Join-Path (Split-Path $preDbAfter) $clobberName
                     Copy-Item -LiteralPath $preDbAfter -Destination $clobber -Force
                     Copy-Item -LiteralPath $preSnap -Destination $preDbAfter -Force
-                    Write-Warning "portfolio.db changed during robocopy (saved clobbered file as $(Split-Path $clobber -Leaf)); restored from preinstall snapshot."
+                    Write-Warning ("portfolio.db changed during robocopy (saved clobbered file as " + $clobberName + "); restored from preinstall snapshot.")
                 }
             }
         } catch {
-            Write-Warning "Could not verify/restore portfolio.db after robocopy: $_"
+            Write-Warning ("Could not verify/restore portfolio.db after robocopy: " + $_)
         }
     }
 } else {
