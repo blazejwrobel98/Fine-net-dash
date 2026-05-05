@@ -4,6 +4,12 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+## [0.2.2] — 2026-05-05
+
+- Dywidenda `%`: liczona rocznie (ostatni rok kalendarzowy z wypłatą), zamiast rolling 12M.
+- Alerty: poprawka porównania czasu (`naive`/`aware`) dla cooldownu w SQLite.
+- Windows instalator: mocniejsze zabezpieczenie `portfolio.db` podczas aktualizacji (stop task + migawki awaryjne).
+
 ## [0.2.1] — 2026-05-04
 
 - Docker: naprawa `HEALTHCHECK` — `CMD` zamiast niedozwolonego `CMD-SHELL` (buildx / `docker/dockerfile:1`).

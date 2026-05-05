@@ -3,7 +3,7 @@
 import os
 
 # Domyślnie przy lokalnym uruchomieniu bez zmiennych środowiskowych.
-_DEFAULT_VERSION = "0.2.1"
+_DEFAULT_VERSION = "0.2.2"
 
 
 def app_version() -> str:
