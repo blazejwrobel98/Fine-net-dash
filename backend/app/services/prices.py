@@ -146,6 +146,8 @@ def _guess_currency(ticker: str) -> str | None:
     u = ticker.upper()
     if u.endswith(".WA") or u.endswith(".WAR"):
         return "PLN"
+    if u.endswith(".ST"):
+        return "SEK"
     if u.endswith(".DE") or u.endswith(".F"):
         return "EUR"
     if u.endswith(".PA") or u.endswith(".AS") or u.endswith(".MI") or u.endswith(".MC"):
