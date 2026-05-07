@@ -287,16 +287,6 @@ def _total_portfolio_row_counts(conn: sqlite3.Connection) -> int:
     return total
 
 
-def _unlink_sqlite_sidecars(db_path: Path) -> None:
-    """Usuń -wal / -shm obok głównego pliku SQLite (stary WAL maskuje nową zawartość po restore)."""
-    for suffix in ("-wal", "-shm"):
-        side = Path(str(db_path) + suffix)
-        try:
-            side.unlink(missing_ok=True)
-        except OSError as e:
-            logger.debug("sqlite sidecar unlink %s: %s", side, e)
-
-
 def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     dbp = _sqlite_db_path()
     folder = _portfolio_dir()
@@ -326,34 +316,24 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     try:
         for attempt in range(35):
             engine.dispose(close=True)
+            src_conn: sqlite3.Connection | None = None
+            dest_conn: sqlite3.Connection | None = None
             try:
-                # Nadpisanie pliku 1:1 (jak restore-portfolio-db-file.ps1). Connection.backup()
-                # na otwartej bazie z WAL potrafi zostawić stary WAL — UI widzi poprzednią liczbę lotów.
-                _unlink_sqlite_sidecars(dbp)
-                shutil.copy2(tmp_path, dbp)
-                verify = sqlite3.connect(str(dbp), timeout=10.0)
-                try:
-                    records = _total_portfolio_row_counts(verify)
-                finally:
-                    verify.close()
-                _unlink_sqlite_sidecars(dbp)
-                engine.dispose(close=True)
+                dest_conn = sqlite3.connect(str(dbp), timeout=60.0)
+                src_conn = sqlite3.connect(str(tmp_path), timeout=60.0)
+                # Pełna kopia stron z pliku kopii (1:1), zamiast ATTACH+DELETE+INSERT po tabelach
+                # (tam łatwo o rozjazd schematu / liczby wierszy vs oczekiwania użytkownika).
+                src_conn.backup(dest_conn)
+                dest_conn.commit()
+                records = _total_portfolio_row_counts(dest_conn)
                 return True, records, f"Przywrocono dane portfela z kopii: {file_name}"
-            except (PermissionError, OSError) as e:
-                last_lock = str(e)
-                win_busy = getattr(e, "winerror", None) == 32
-                if not win_busy and "being used" not in str(e).lower() and "busy" not in str(e).lower():
-                    logger.warning("portfolio restore file replace failed: %s", e)
-                    return False, 0, f"Blad przy przywracaniu portfela: {e}"
-                logger.info(
-                    "portfolio restore file busy (attempt %s/%s), retrying: %s",
-                    attempt + 1,
-                    35,
-                    e,
-                )
-                time.sleep(0.35)
             except sqlite3.OperationalError as e:
                 last_lock = str(e)
+                try:
+                    if dest_conn is not None:
+                        dest_conn.rollback()
+                except Exception:
+                    pass
                 if "locked" not in str(e).lower():
                     logger.warning("portfolio restore failed: %s", e)
                     return False, 0, f"Blad przy przywracaniu portfela: {e}"
@@ -365,8 +345,24 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
                 )
                 time.sleep(0.35)
             except Exception as e:
+                try:
+                    if dest_conn is not None:
+                        dest_conn.rollback()
+                except Exception:
+                    pass
                 logger.warning("portfolio restore failed: %s", e)
                 return False, 0, f"Blad przy przywracaniu portfela: {e}"
+            finally:
+                if src_conn is not None:
+                    try:
+                        src_conn.close()
+                    except Exception:
+                        pass
+                if dest_conn is not None:
+                    try:
+                        dest_conn.close()
+                    except Exception:
+                        pass
         logger.warning("portfolio restore exhausted retries: %s", last_lock)
         return (
             False,

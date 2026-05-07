@@ -521,9 +521,7 @@ def backups_portfolio_restore(body: BackupRestoreIn):
         try:
             scheduler.pause()
             paused = True
-            # Joby harmonogramu mogą jeszcze trzymać SessionLocal na portfolio.db — daj im zakończyć
-            # zanim restore usunie WAL / nadpisze plik (inaczej SQLite potrafi zostawić stary stan).
-            time.sleep(2.5)
+            time.sleep(1.0)
         except Exception as e:
             logger.warning("scheduler pause before portfolio restore: %s", e)
     try:
