@@ -72,7 +72,10 @@ class PriceCache(Base):
     price: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str | None] = mapped_column(String(8), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=_utc_now, onupdate=_utc_now)
+    # % względem ostatniej wypłaconej rocznej dywidendy (historyczna, nie prognoza).
     dividend_yield_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # % względem planowanej (forward) dywidendy rocznej z Yahoo quote.
+    dividend_yield_forward_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     change_1d_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     change_1w_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
     change_1m_pct: Mapped[float | None] = mapped_column(Float, nullable=True)

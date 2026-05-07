@@ -304,6 +304,7 @@ def list_universe(
                 price=pc.price if pc else None,
                 currency=pc.currency if pc else None,
                 dividend_yield_pct=pc.dividend_yield_pct if pc else None,
+                dividend_yield_forward_pct=pc.dividend_yield_forward_pct if pc else None,
                 change_1d_pct=pc.change_1d_pct if pc else None,
                 change_1w_pct=pc.change_1w_pct if pc else None,
                 change_1m_pct=pc.change_1m_pct if pc else None,

@@ -790,12 +790,13 @@ export default function App() {
                     onSort={onUniverseSort}
                   />
                   <SortTh
-                    label="Dywidenda %"
+                    label="Dywidenda % (poprz.)"
                     sortKey="dividend"
                     activeKey={universeSort.key}
                     ascending={universeSort.asc}
                     onSort={onUniverseSort}
                   />
+                  <th>Dywidenda % (plan.)</th>
                   <SortTh
                     label={`Zwrot ${periodLabel(trendPeriod)}`}
                     sortKey="change"
@@ -840,6 +841,9 @@ export default function App() {
                       )}
                     </td>
                     <td>{s.dividend_yield_pct != null ? `${s.dividend_yield_pct.toFixed(2)} %` : "—"}</td>
+                    <td>
+                      {s.dividend_yield_forward_pct != null ? `${s.dividend_yield_forward_pct.toFixed(2)} %` : "—"}
+                    </td>
                     <TrendCell v={pickChange(s, trendPeriod)} />
                     <td>
                       {pickAvgPrice(s, trendPeriod) != null ? (

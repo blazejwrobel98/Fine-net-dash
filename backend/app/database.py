@@ -42,6 +42,7 @@ def _migrate_sqlite_schema() -> None:
         if insp.has_table("price_cache"):
             for col, typ in [
                 ("dividend_yield_pct", "FLOAT"),
+                ("dividend_yield_forward_pct", "FLOAT"),
                 ("change_1d_pct", "FLOAT"),
                 ("change_1w_pct", "FLOAT"),
                 ("change_1m_pct", "FLOAT"),

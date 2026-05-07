@@ -1,6 +1,8 @@
 import pandas as pd
+import pytest
 
-from app.services.prices import _dividend_yield_from_history, _guess_currency
+from app.services import prices
+from app.services.prices import _dividend_yield_from_history, _fetch_forward_dividend_rate_map, _guess_currency
 
 
 def test_dividend_yield_uses_latest_calendar_year_not_rolling_12m():
@@ -30,3 +32,30 @@ def test_guess_currency_for_sweden_tickers():
 
 def test_guess_currency_for_germany_tickers():
     assert _guess_currency("MBG.DE") == "EUR"
+
+
+def test_forward_dividend_rate_map_parses_quote_payload(monkeypatch: pytest.MonkeyPatch):
+    class FakeResp:
+        status_code = 200
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {
+                "quoteResponse": {
+                    "result": [
+                        {"symbol": "SWED-A.ST", "dividendRate": 20.45},
+                        {"symbol": "MBG.DE", "dividendRate": 3.5},
+                        {"symbol": "XXX", "dividendRate": None},
+                    ]
+                }
+            }
+
+    def fake_get(url: str, timeout: int = 20):  # noqa: ARG001
+        return FakeResp()
+
+    monkeypatch.setattr(prices._YF_SESSION, "get", fake_get)
+    out = _fetch_forward_dividend_rate_map(["SWED-A.ST", "MBG.DE"])
+    assert out["SWED-A.ST"] == pytest.approx(20.45)
+    assert out["MBG.DE"] == pytest.approx(3.5)

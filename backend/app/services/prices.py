@@ -104,6 +104,49 @@ def _load_history_yahoo_chart(ticker: str, period: str, *, actions: bool) -> pd.
     return df
 
 
+def _fetch_forward_dividend_rate_map(tickers: list[str]) -> dict[str, float]:
+    """
+    Forward annual dividend amount per share z Yahoo quote (batch),
+    np. 20.45 dla SWED-A.ST.
+    """
+    out: dict[str, float] = {}
+    if not tickers:
+        return out
+    unique = sorted(set(t.upper() for t in tickers if t))
+    chunk_size = 40
+    for i in range(0, len(unique), chunk_size):
+        chunk = unique[i : i + chunk_size]
+        sym = ",".join(quote(t, safe="") for t in chunk)
+        url = f"https://query1.finance.yahoo.com/v7/finance/quote?symbols={sym}"
+        payload = None
+        for attempt in range(2):
+            try:
+                r = _YF_SESSION.get(url, timeout=20)
+                if r.status_code == 429:
+                    raise requests.HTTPError("429")
+                r.raise_for_status()
+                payload = r.json()
+                break
+            except Exception as e:
+                logger.debug("yahoo quote forward div batch %s attempt %s: %s", i // chunk_size, attempt, e)
+                if attempt == 0:
+                    time.sleep(1.2 + uniform(0.1, 0.6))
+        if not payload:
+            continue
+        rows = (payload.get("quoteResponse") or {}).get("result") or []
+        for row in rows:
+            t = str(row.get("symbol") or "").upper().strip()
+            if not t:
+                continue
+            try:
+                rate = float(row.get("dividendRate"))
+            except (TypeError, ValueError):
+                rate = 0.0
+            if rate > 0:
+                out[t] = rate
+    return out
+
+
 def yahoo_dividend_events(ticker: str, range_key: str = "2y") -> list[tuple[date, float]]:
     """
     Zdarzenia dywidend z Yahoo chart (events=div), posortowane rosnąco po dacie.
@@ -234,6 +277,7 @@ def fetch_extended_metrics(ticker: str) -> dict:
         "price": None,
         "currency": None,
         "dividend_yield_pct": None,
+        "dividend_yield_forward_pct": None,
         "change_1d_pct": None,
         "change_1w_pct": None,
         "change_1m_pct": None,
@@ -282,6 +326,7 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
     failed: list[str] = []
     updated = 0
     delay = max(0.0, float(settings.yahoo_request_delay_seconds))
+    forward_div_rate = _fetch_forward_dividend_rate_map(tickers)
     for i, ticker in enumerate(tickers):
         if i > 0 and delay > 0:
             time.sleep(delay + uniform(0, 0.2))
@@ -289,6 +334,11 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
         if m["price"] is None:
             failed.append(ticker)
             continue
+        fd = forward_div_rate.get(ticker.upper())
+        if fd and m["price"] and m["price"] > 0:
+            m["dividend_yield_forward_pct"] = round((float(fd) / float(m["price"])) * 100.0, 3)
+        else:
+            m["dividend_yield_forward_pct"] = None
         row = db.execute(select(PriceCache).where(PriceCache.ticker == ticker)).scalar_one_or_none()
         now = datetime.now(timezone.utc)
         if row:
@@ -296,6 +346,7 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
             row.currency = m["currency"]
             row.updated_at = now
             row.dividend_yield_pct = m["dividend_yield_pct"]
+            row.dividend_yield_forward_pct = m["dividend_yield_forward_pct"]
             row.change_1d_pct = m["change_1d_pct"]
             row.change_1w_pct = m["change_1w_pct"]
             row.change_1m_pct = m["change_1m_pct"]
@@ -314,6 +365,7 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
                     currency=m["currency"],
                     updated_at=now,
                     dividend_yield_pct=m["dividend_yield_pct"],
+                    dividend_yield_forward_pct=m["dividend_yield_forward_pct"],
                     change_1d_pct=m["change_1d_pct"],
                     change_1w_pct=m["change_1w_pct"],
                     change_1m_pct=m["change_1m_pct"],

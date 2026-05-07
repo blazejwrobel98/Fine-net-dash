@@ -24,7 +24,10 @@ class UniverseRowOut(BaseModel):
     notes: str | None
     price: float | None
     currency: str | None
+    # Historyczna: % z ostatniej wypłaconej rocznej dywidendy.
     dividend_yield_pct: float | None
+    # Planowana (forward): % z prognozowanej rocznej dywidendy.
+    dividend_yield_forward_pct: float | None
     change_1d_pct: float | None
     change_1w_pct: float | None
     change_1m_pct: float | None

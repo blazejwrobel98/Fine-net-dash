@@ -9,7 +9,10 @@ export type UniverseRow = {
   notes: string | null;
   price: number | null;
   currency: string | null;
+  // % względem ostatniej wypłaconej rocznej dywidendy.
   dividend_yield_pct: number | null;
+  // % względem planowanej (forward) dywidendy rocznej.
+  dividend_yield_forward_pct: number | null;
   change_1d_pct: number | null;
   change_1w_pct: number | null;
   change_1m_pct: number | null;
