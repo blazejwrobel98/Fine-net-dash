@@ -87,6 +87,17 @@ if ($existingTask) {
     }
 }
 
+# Stop-ScheduledTask bywa asynchroniczne — uvicorn moze trzymac pliki backendu i robocopy zostawi STARY kod.
+$venvPy = Join-Path $InstallPath "venv\Scripts\python.exe"
+if (Test-Path -LiteralPath $venvPy) {
+    Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue | ForEach-Object {
+        if ($_.ExecutablePath -and ($_.ExecutablePath -ieq $venvPy)) {
+            Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
+        }
+    }
+    Start-Sleep -Seconds 2
+}
+
 $preSnap = $null
 if (-not $SkipFileCopy) {
     if (Test-Path $InstallPath) {
