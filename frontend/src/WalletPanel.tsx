@@ -74,35 +74,35 @@ export default function WalletPanel({ onChanged }: { onChanged: () => Promise<vo
 
   return (
     <>
-      {err && <div className="card error">{err}</div>}
+      {err ? <div className="card alert-card">{err}</div> : null}
 
       {sum && (
         <div className="card">
           <h2>Podsumowanie (PLN)</h2>
-          <div className="row" style={{ gap: "1.5rem" }}>
-            <div>
-              <div className="muted">Wpłaty na konto portfela</div>
-              <strong>{sum.deposits_total_pln.toFixed(2)}</strong>
+          <div className="stat-grid">
+            <div className="stat-item">
+              <div className="stat-item__label">Wpłaty na konto</div>
+              <div className="stat-item__value">{sum.deposits_total_pln.toFixed(2)}</div>
             </div>
-            <div>
-              <div className="muted">Dywidendy (wpływy)</div>
-              <strong>{sum.dividends_total_pln.toFixed(2)}</strong>
+            <div className="stat-item">
+              <div className="stat-item__label">Dywidendy (wpływy)</div>
+              <div className="stat-item__value">{sum.dividends_total_pln.toFixed(2)}</div>
             </div>
-            <div>
-              <div className="muted">Zainwestowane (koszt lotów)</div>
-              <strong>{sum.invested_pln.toFixed(2)}</strong>
+            <div className="stat-item">
+              <div className="stat-item__label">Zainwestowane (koszt)</div>
+              <div className="stat-item__value">{sum.invested_pln.toFixed(2)}</div>
             </div>
-            <div>
-              <div className="muted">Gotówka dostępna</div>
-              <strong>{sum.cash_available_pln.toFixed(2)}</strong>
+            <div className="stat-item">
+              <div className="stat-item__label">Gotówka dostępna</div>
+              <div className="stat-item__value">{sum.cash_available_pln.toFixed(2)}</div>
             </div>
-            <div>
-              <div className="muted">Wartość rynkowa papierów</div>
-              <strong>{sum.holdings_market_pln.toFixed(2)}</strong>
+            <div className="stat-item">
+              <div className="stat-item__label">Wartość rynkowa</div>
+              <div className="stat-item__value">{sum.holdings_market_pln.toFixed(2)}</div>
             </div>
-            <div>
-              <div className="muted">Łącznie (rynek + gotówka)</div>
-              <strong style={{ color: "var(--accent)" }}>{sum.total_equity_pln.toFixed(2)}</strong>
+            <div className="stat-item stat-item--highlight">
+              <div className="stat-item__label">Łącznie (rynek + gotówka)</div>
+              <div className="stat-item__value">{sum.total_equity_pln.toFixed(2)}</div>
             </div>
           </div>
           <p className="muted" style={{ marginTop: "0.75rem" }}>

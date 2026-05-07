@@ -13,6 +13,7 @@ import {
 } from "chart.js";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import { api, type AllocationPayload, type TimelinePayload } from "./api";
+import { type ChartColorScheme, chartPalette } from "./chartTheme";
 
 ChartJS.register(
   CategoryScale,
@@ -26,9 +27,10 @@ ChartJS.register(
   Legend
 );
 
-const chartFont = { family: "DM Sans, system-ui, sans-serif" };
+const chartFont = { family: "'Plus Jakarta Sans', system-ui, sans-serif" };
 
-export default function ChartsPanel() {
+export default function ChartsPanel({ colorScheme = "dark" }: { colorScheme?: ChartColorScheme }) {
+  const pal = chartPalette(colorScheme);
   const [tl, setTl] = useState<TimelinePayload | null>(null);
   const [alloc, setAlloc] = useState<AllocationPayload | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -58,22 +60,22 @@ export default function ChartsPanel() {
             {
               label: "Wartość całkowita (PLN)",
               data: tl.equity_series.map((x) => x.total_equity_pln),
-              borderColor: "#c9a227",
-              backgroundColor: "rgba(201, 162, 39, 0.15)",
+              borderColor: pal.accent,
+              backgroundColor: pal.accentFill,
               fill: true,
               tension: 0.25,
             },
             {
               label: "Papiery (PLN)",
               data: tl.equity_series.map((x) => x.holdings_pln),
-              borderColor: "#5cb88a",
+              borderColor: pal.green,
               backgroundColor: "transparent",
               tension: 0.2,
             },
             {
               label: "Gotówka (PLN)",
               data: tl.equity_series.map((x) => x.cash_pln),
-              borderColor: "#8fa99a",
+              borderColor: pal.mutedLine,
               backgroundColor: "transparent",
               tension: 0.2,
             },
@@ -91,7 +93,7 @@ export default function ChartsPanel() {
             {
               label: "Dywidenda (PLN)",
               data: tl.dividends.map((d) => d.amount_pln),
-              backgroundColor: "rgba(201, 162, 39, 0.65)",
+              backgroundColor: pal.bar,
             },
           ],
         }
@@ -104,18 +106,7 @@ export default function ChartsPanel() {
           datasets: [
             {
               data: alloc.slices.map((s) => s.value_pln),
-              backgroundColor: [
-                "#c9a227",
-                "#5cb88a",
-                "#6b9bd1",
-                "#e07a6e",
-                "#a78bfa",
-                "#f472b6",
-                "#94a3b8",
-                "#22d3ee",
-                "#fb923c",
-                "#4ade80",
-              ],
+              backgroundColor: pal.pie,
             },
           ],
         }
@@ -123,7 +114,7 @@ export default function ChartsPanel() {
 
   return (
     <>
-      {err && <div className="card error">{err}</div>}
+      {err ? <div className="card alert-card">{err}</div> : null}
       <div className="card">
         <h2>Wykresy</h2>
         <p className="muted">
@@ -138,17 +129,17 @@ export default function ChartsPanel() {
       <div className="card">
         <h3>Wartość portfela w czasie</h3>
         {equityData ? (
-          <div style={{ maxHeight: 320, position: "relative" }}>
+          <div className="chart-box">
             <Line
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { labels: { color: "#e8f0eb", ...chartFont } },
+                  legend: { labels: { color: pal.legend, ...chartFont } },
                 },
                 scales: {
-                  x: { ticks: { color: "#8fa99a", ...chartFont }, grid: { color: "#2d3d35" } },
-                  y: { ticks: { color: "#8fa99a", ...chartFont }, grid: { color: "#2d3d35" } },
+                  x: { ticks: { color: pal.tick, ...chartFont }, grid: { color: pal.grid } },
+                  y: { ticks: { color: pal.tick, ...chartFont }, grid: { color: pal.grid } },
                 },
               }}
               data={equityData}
@@ -162,7 +153,7 @@ export default function ChartsPanel() {
       <div className="card">
         <h3>Wypłaty dywidend (kwoty)</h3>
         {divBar ? (
-          <div style={{ maxHeight: 320, position: "relative" }}>
+          <div className="chart-box">
             <Bar
               options={{
                 responsive: true,
@@ -172,8 +163,8 @@ export default function ChartsPanel() {
                   legend: { display: false },
                 },
                 scales: {
-                  x: { ticks: { color: "#8fa99a", ...chartFont }, grid: { color: "#2d3d35" } },
-                  y: { ticks: { color: "#8fa99a", ...chartFont, maxRotation: 0 }, grid: { color: "#2d3d35" } },
+                  x: { ticks: { color: pal.tick, ...chartFont }, grid: { color: pal.grid } },
+                  y: { ticks: { color: pal.tick, ...chartFont, maxRotation: 0 }, grid: { color: pal.grid } },
                 },
               }}
               data={divBar}
@@ -187,7 +178,7 @@ export default function ChartsPanel() {
       <div className="card">
         <h3>Struktura (wartość rynkowa + gotówka)</h3>
         {pieData ? (
-          <div style={{ maxHeight: 360, position: "relative", margin: "0 auto", maxWidth: 400 }}>
+          <div className="chart-box chart-box--pie">
             <Pie
               options={{
                 responsive: true,
@@ -195,7 +186,7 @@ export default function ChartsPanel() {
                 plugins: {
                   legend: {
                     position: "bottom",
-                    labels: { color: "#e8f0eb", ...chartFont },
+                    labels: { color: pal.legend, ...chartFont },
                   },
                 },
               }}

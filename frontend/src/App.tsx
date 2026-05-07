@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  Globe,
+  LayoutDashboard,
+  LineChart as LineChartIcon,
+  Moon,
+  Settings as SettingsIcon,
+  Sun,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
+import {
   api,
   type AppSettings,
   type BackupFile,
@@ -9,10 +19,70 @@ import {
   type UniverseResponse,
   type UniverseRow,
 } from "./api";
+import type { ChartColorScheme } from "./chartTheme";
 import ChartsPanel from "./ChartsPanel";
 import WalletPanel from "./WalletPanel";
 
 type Tab = "positions" | "universe" | "wallet" | "charts" | "settings";
+
+type ThemeMode = "dark" | "light";
+
+const NAV_ITEMS: { id: Tab; label: string; short: string; icon: LucideIcon }[] = [
+  { id: "positions", label: "Pozycje", short: "Pozycje", icon: LayoutDashboard },
+  { id: "universe", label: "Lista spółek", short: "Universe", icon: Globe },
+  { id: "wallet", label: "Portfel PLN", short: "Portfel", icon: Wallet },
+  { id: "charts", label: "Wykresy", short: "Wykresy", icon: LineChartIcon },
+  { id: "settings", label: "Ustawienia", short: "Ustaw.", icon: SettingsIcon },
+];
+
+function readInitialTheme(): ThemeMode {
+  if (typeof window === "undefined") return "dark";
+  const saved = window.localStorage.getItem("theme");
+  if (saved === "light" || saved === "dark") return saved;
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function tabPageMeta(tab: Tab): { eyebrow: string; title: string; description: string } {
+  switch (tab) {
+    case "positions":
+      return {
+        eyebrow: "Pulpit",
+        title: "Pozycje i transakcje",
+        description:
+          "Dodawaj loty, odświeżaj ceny z Yahoo i śledź koszt vs rynek. „Odśwież ceny” aktualizuje też wykresy w czasie.",
+      };
+    case "universe":
+      return {
+        eyebrow: "Filtry",
+        title: "Lista spółek dywidendowych",
+        description:
+          "Przegląd universe z Yahoo: region, próg dywidendy, trend i średnia dla wybranego okresu.",
+      };
+    case "wallet":
+      return {
+        eyebrow: "Gotówka",
+        title: "Portfel PLN",
+        description:
+          "Wpłaty, dywidendy w PLN, gotówka dostępna i prognoza z historii wypłat (szacunek).",
+      };
+    case "charts":
+      return {
+        eyebrow: "Analityka",
+        title: "Wykresy portfela",
+        description:
+          "Snapshoty zapisane przy odświeżaniu cen i zmianach portfela — ostatni punkt pokazuje aktualną wartość.",
+      };
+    case "settings":
+      return {
+        eyebrow: "Konfiguracja",
+        title: "Ustawienia i kopie zapasowe",
+        description:
+          "Kursy NBP / ręcznie, alerty, ntfy, harmonogram odświeżania oraz eksport i import kopii.",
+      };
+    default:
+      return { eyebrow: "", title: "", description: "" };
+  }
+}
 type TrendPeriod = "1d" | "1w" | "1m" | "1y" | "5y";
 
 function regionClass(r: string) {
@@ -194,6 +264,28 @@ export default function App() {
   const [portfolioImportFile, setPortfolioImportFile] = useState<File | null>(null);
   const [pricesImportFile, setPricesImportFile] = useState<File | null>(null);
   const [serverBuild, setServerBuild] = useState<string | null>(null);
+  const [theme, setTheme] = useState<ThemeMode>(() => readInitialTheme());
+  const [toastErrDismissed, setToastErrDismissed] = useState(false);
+  const [toastOkDismissed, setToastOkDismissed] = useState(false);
+
+  const chartScheme: ChartColorScheme = theme === "light" ? "light" : "dark";
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    try {
+      window.localStorage.setItem("theme", theme);
+    } catch {
+      /* ignore */
+    }
+  }, [theme]);
+
+  useEffect(() => {
+    setToastErrDismissed(false);
+  }, [err]);
+
+  useEffect(() => {
+    setToastOkDismissed(false);
+  }, [refreshMsg]);
 
   const loadCore = useCallback(async () => {
     setErr(null);
@@ -530,60 +622,87 @@ export default function App() {
     ? new Date(universeData.last_prices_update).toLocaleString("pl-PL")
     : null;
 
+  const page = tabPageMeta(tab);
+  const mobileTitle = NAV_ITEMS.find((n) => n.id === tab)?.label ?? "";
+
   if (loading && !settings) {
     return (
-      <div className="card">
-        <p className="muted">Łączenie z API…</p>
+      <div className="shell-loading">
+        <div className="shell-loading__card">
+          <div className="shell-loading__spinner" aria-hidden />
+          <p className="muted" style={{ margin: 0 }}>
+            Łączenie z API…
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="pre-alpha-banner" role="status">
-        <strong>Wersja robocza (pre-alfa).</strong> Uruchamiaj lokalnie lub w zaufanej sieci — nie udostępniaj
-        publicznie w internecie bez zabezpieczeń (brak logowania do API). Zobacz też dokumentację w repozytorium.
-        <br />
-        <span className="muted">
-          <strong>Build backendu:</strong> {serverBuild ?? "…"}
-        </span>
-      </div>
-      <header>
-        <h1>Portfel dywidendowy</h1>
-        <p>
-          Lista spółek dywidendowych, ręczne loty (w tym ułamkowe), portfel PLN, wykresy. Ceny z Yahoo Finance —
-          użyj „Odśwież ceny”, żeby zaktualizować dane i oś czasu portfela.
-        </p>
-      </header>
-
-      {err && (
-        <div className="card error" style={{ marginBottom: "1rem" }}>
-          {err}
+    <div className="app-shell">
+      <aside className="app-sidebar" aria-label="Nawigacja główna">
+        <div className="app-sidebar__brand">
+          <div className="app-sidebar__logo" aria-hidden>
+            PD
+          </div>
+          <div className="app-sidebar__titles">
+            <h1>Portfel dywidendowy</h1>
+            <p>Yahoo Finance, NBP — uruchomienie lokalne</p>
+          </div>
         </div>
-      )}
-      {refreshMsg && (
-        <div className="card muted" style={{ marginBottom: "1rem" }}>
-          {refreshMsg}
+        <nav className="app-nav">
+          {NAV_ITEMS.map(({ id, label, short, icon: Icon }) => (
+            <button
+              key={id}
+              type="button"
+              className={`app-nav__btn${tab === id ? " is-active" : ""}`}
+              onClick={() => setTab(id)}
+            >
+              <Icon size={20} strokeWidth={2} aria-hidden />
+              <span className="nav-label-full">{label}</span>
+              <span className="nav-label-mobile">{short}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="app-sidebar__footer">
+          <div className="app-build-pill" role="status">
+            <strong>Build</strong> {serverBuild ?? "…"}
+          </div>
+          <button
+            type="button"
+            className="theme-toggle"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+          >
+            {theme === "dark" ? <Sun size={16} strokeWidth={2} aria-hidden /> : <Moon size={16} strokeWidth={2} aria-hidden />}
+            {theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
+          </button>
         </div>
-      )}
+      </aside>
 
-      <div className="tabs">
-        <button type="button" className={tab === "positions" ? "active" : ""} onClick={() => setTab("positions")}>
-          Pozycje
-        </button>
-        <button type="button" className={tab === "universe" ? "active" : ""} onClick={() => setTab("universe")}>
-          Lista spółek
-        </button>
-        <button type="button" className={tab === "wallet" ? "active" : ""} onClick={() => setTab("wallet")}>
-          Portfel PLN
-        </button>
-        <button type="button" className={tab === "charts" ? "active" : ""} onClick={() => setTab("charts")}>
-          Wykresy
-        </button>
-        <button type="button" className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}>
-          Ustawienia
-        </button>
-      </div>
+      <div className="app-main">
+        <header className="app-topbar">
+          <span className="app-topbar__title">{mobileTitle}</span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Włącz tryb jasny" : "Włącz tryb ciemny"}
+          >
+            {theme === "dark" ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+          </button>
+        </header>
+
+        <div className="app-main__inner">
+          <div className="pre-alpha-banner" role="status">
+            <strong>Wersja robocza (pre-alfa).</strong> Uruchamiaj lokalnie lub w zaufanej sieci — nie udostępniaj
+            publicznie bez zabezpieczeń (brak logowania do API). Szczegóły w repozytorium.
+          </div>
+
+          <div className="page-header">
+            <p className="page-header__eyebrow">{page.eyebrow}</p>
+            <h2>{page.title}</h2>
+            <p>{page.description}</p>
+          </div>
 
       {tab === "positions" && (
         <>
@@ -795,21 +914,22 @@ export default function App() {
                 placeholder="5"
               />
             </div>
-            <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap", alignItems: "center" }}>
-              <span className="muted" style={{ marginRight: "0.5rem" }}>
-                Zwrot / trend:
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center", flexWrap: "wrap" }}>
+              <span className="muted" style={{ marginRight: "0.25rem" }}>
+                Zwrot / trend
               </span>
-              {(["1d", "1w", "1m", "1y", "5y"] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={trendPeriod === p ? "btn btn-primary" : "btn btn-ghost"}
-                  style={{ padding: "0.4rem 0.65rem" }}
-                  onClick={() => setTrendPeriod(p)}
-                >
-                  {periodLabel(p)}
-                </button>
-              ))}
+              <div className="segmented" role="group" aria-label="Okres trendu">
+                {(["1d", "1w", "1m", "1y", "5y"] as const).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    className={trendPeriod === p ? "btn btn-primary" : "btn btn-ghost"}
+                    onClick={() => setTrendPeriod(p)}
+                  >
+                    {periodLabel(p)}
+                  </button>
+                ))}
+              </div>
             </div>
             <button type="button" className="btn btn-ghost" onClick={() => void loadUniverseFiltered()}>
               Odśwież tabelę
@@ -934,7 +1054,7 @@ export default function App() {
 
       {tab === "wallet" && <WalletPanel onChanged={loadCore} />}
 
-      {tab === "charts" && <ChartsPanel />}
+      {tab === "charts" && <ChartsPanel colorScheme={chartScheme} />}
 
       {tab === "settings" && settings && (
         <>
@@ -1243,6 +1363,43 @@ export default function App() {
           </div>
         </>
       )}
-    </>
+        </div>
+      </div>
+
+      <div className="toast-stack" aria-live="polite">
+        {err && !toastErrDismissed ? (
+          <div className="toast toast--error" role="alert">
+            <div className="toast__body">
+              <strong>Błąd</strong>
+              {err}
+            </div>
+            <button
+              type="button"
+              className="toast__close"
+              onClick={() => setToastErrDismissed(true)}
+              aria-label="Zamknij komunikat"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+        {refreshMsg && !toastOkDismissed ? (
+          <div className="toast toast--success">
+            <div className="toast__body">
+              <strong>Informacja</strong>
+              {refreshMsg}
+            </div>
+            <button
+              type="button"
+              className="toast__close"
+              onClick={() => setToastOkDismissed(true)}
+              aria-label="Zamknij komunikat"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }
