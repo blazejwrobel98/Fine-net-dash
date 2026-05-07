@@ -2,7 +2,12 @@ import pandas as pd
 import pytest
 
 from app.services import prices
-from app.services.prices import _dividend_yield_from_history, _fetch_forward_dividend_rate_map, _guess_currency
+from app.services.prices import (
+    _dividend_yield_from_history,
+    _fetch_forward_dividend_rate_from_html,
+    _fetch_forward_dividend_rate_map,
+    _guess_currency,
+)
 
 
 def test_dividend_yield_uses_latest_calendar_year_not_rolling_12m():
@@ -59,3 +64,18 @@ def test_forward_dividend_rate_map_parses_quote_payload(monkeypatch: pytest.Monk
     out = _fetch_forward_dividend_rate_map(["SWED-A.ST", "MBG.DE"])
     assert out["SWED-A.ST"] == pytest.approx(20.45)
     assert out["MBG.DE"] == pytest.approx(3.5)
+
+
+def test_forward_dividend_rate_from_html_parses_raw_value(monkeypatch: pytest.MonkeyPatch):
+    class FakeResp:
+        status_code = 200
+        text = '<html>..."dividendRate":{"raw":20.45,"fmt":"20.45"}...</html>'
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url: str, timeout: int = 25):  # noqa: ARG001
+        return FakeResp()
+
+    monkeypatch.setattr(prices._YF_SESSION, "get", fake_get)
+    assert _fetch_forward_dividend_rate_from_html("SWED-A.ST") == pytest.approx(20.45)

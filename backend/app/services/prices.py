@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from datetime import date, datetime, timezone
 from random import uniform
@@ -36,6 +37,7 @@ def _yf_session() -> requests.Session:
 
 
 _YF_SESSION = _yf_session()
+_DIVIDEND_RATE_RE = re.compile(r'"dividendRate"\s*:\s*\{"raw"\s*:\s*([0-9]+(?:\.[0-9]+)?)')
 
 
 def _yahoo_chart_range(period: str) -> str:
@@ -145,6 +147,28 @@ def _fetch_forward_dividend_rate_map(tickers: list[str]) -> dict[str, float]:
             if rate > 0:
                 out[t] = rate
     return out
+
+
+def _fetch_forward_dividend_rate_from_html(ticker: str) -> float | None:
+    """
+    Fallback, gdy Yahoo quote API zwróci pusto/429:
+    parsujemy `dividendRate.raw` ze strony quote HTML.
+    """
+    sym = quote((ticker or "").upper().strip(), safe="")
+    if not sym:
+        return None
+    url = f"https://finance.yahoo.com/quote/{sym}"
+    try:
+        r = _YF_SESSION.get(url, timeout=25)
+        r.raise_for_status()
+        m = _DIVIDEND_RATE_RE.search(r.text or "")
+        if not m:
+            return None
+        val = float(m.group(1))
+        return val if val > 0 else None
+    except Exception as e:
+        logger.debug("yahoo html forward div %s: %s", ticker, e)
+        return None
 
 
 def yahoo_dividend_events(ticker: str, range_key: str = "2y") -> list[tuple[date, float]]:
@@ -335,6 +359,8 @@ def refresh_tickers(db: Session, tickers: list[str]) -> tuple[int, list[str]]:
             failed.append(ticker)
             continue
         fd = forward_div_rate.get(ticker.upper())
+        if not fd:
+            fd = _fetch_forward_dividend_rate_from_html(ticker)
         if fd and m["price"] and m["price"] > 0:
             m["dividend_yield_forward_pct"] = round((float(fd) / float(m["price"])) * 100.0, 3)
         else:
