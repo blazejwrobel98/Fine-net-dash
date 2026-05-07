@@ -118,7 +118,9 @@ if (-not $SkipFileCopy) {
     # Never overwrite runtime DB in install/backend/data during app updates.
     # Uwaga: /XD bywa zawodny w niektórych wersjach robocopy — po sync sprawdzamy hash i cofamy zmianę.
     # /IS /IT — nadpisuj także gdy cel ma „nowszy” czas modyfikacji niż źródło (typowe po git clone z starymi mtime).
-    robocopy $SourcePath $InstallPath /E /XD venv backend\data /IS /IT /NFL /NDL /NJH /NJS /NC /NS | Out-Null
+    # /XF portfolio.db — nigdy nie kopiuj pliku bazy z katalogu źródłowego (w repo dev często leży inna/węższa baza
+    #   niż użytkownika; przypadkowe nadpisanie cofało „11 lotów” → 8 przy syncu z dysku D:).
+    robocopy $SourcePath $InstallPath /E /XD venv backend\data /XF portfolio.db /IS /IT /NFL /NDL /NJH /NJS /NC /NS | Out-Null
     if ($LASTEXITCODE -ge 8) { throw "robocopy install failed (exit $LASTEXITCODE)" }
 
     if ($preSnap -and (Test-Path -LiteralPath $preSnap)) {
