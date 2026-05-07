@@ -2,6 +2,7 @@ import json
 import logging
 import shutil
 import sqlite3
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -266,55 +267,75 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     engine.dispose(close=True)
 
     tmp_path = folder / f".restore-work-{uuid.uuid4().hex}.db"
-    conn: sqlite3.Connection | None = None
-    copied_rows = 0
     try:
         shutil.copy2(src_path, tmp_path)
     except OSError as e:
         return False, 0, f"Nie mozna przygotowac kopii roboczej z pliku zrodlowego: {e}"
 
+    last_lock: str | None = None
     try:
-        conn = sqlite3.connect(str(dbp), timeout=60.0)
-        conn.execute("PRAGMA foreign_keys=OFF")
-        conn.execute("BEGIN IMMEDIATE")
-        conn.execute("ATTACH DATABASE ? AS srcdb", (str(tmp_path),))
-        try:
-            for table in _PORTFOLIO_TABLES:
-                if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
-                    continue
-                copied_rows += _copy_table_from_attached(conn, table)
-            conn.execute("DETACH DATABASE srcdb")
-        except Exception:
+        for attempt in range(35):
+            engine.dispose(close=True)
+            conn: sqlite3.Connection | None = None
+            copied_rows = 0
             try:
-                conn.execute("DETACH DATABASE srcdb")
-            except Exception:
-                pass
-            raise
-        conn.commit()
-        return True, copied_rows, f"Przywrocono dane portfela z kopii: {file_name}"
-    except Exception as e:
-        try:
-            if conn is not None:
-                conn.rollback()
-        except Exception:
-            pass
-        logger.warning("portfolio restore failed: %s", e)
-        err = str(e)
-        if "locked" in err.lower():
-            return (
-                False,
-                0,
-                "Baza SQLite jest zablokowana. Zamknij inne programy uzywajace portfolio.db, "
-                "ew. zatrzymaj zadanie harmonogramu „DividendPortfolio” na chwile i sprobuj ponownie — "
-                "albo uzyj scripts/restore-portfolio-db-file.ps1 (najpewniejsze).",
-            )
-        return False, 0, f"Blad przy przywracaniu portfela: {e}"
+                conn = sqlite3.connect(str(dbp), timeout=60.0)
+                conn.execute("PRAGMA foreign_keys=OFF")
+                conn.execute("BEGIN IMMEDIATE")
+                conn.execute("ATTACH DATABASE ? AS srcdb", (str(tmp_path),))
+                try:
+                    for table in _PORTFOLIO_TABLES:
+                        if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
+                            continue
+                        copied_rows += _copy_table_from_attached(conn, table)
+                    conn.execute("DETACH DATABASE srcdb")
+                except Exception:
+                    try:
+                        conn.execute("DETACH DATABASE srcdb")
+                    except Exception:
+                        pass
+                    raise
+                conn.commit()
+                return True, copied_rows, f"Przywrocono dane portfela z kopii: {file_name}"
+            except sqlite3.OperationalError as e:
+                last_lock = str(e)
+                try:
+                    if conn is not None:
+                        conn.rollback()
+                except Exception:
+                    pass
+                if "locked" not in str(e).lower():
+                    logger.warning("portfolio restore failed: %s", e)
+                    return False, 0, f"Blad przy przywracaniu portfela: {e}"
+                logger.info(
+                    "portfolio restore lock (attempt %s/%s), retrying: %s",
+                    attempt + 1,
+                    35,
+                    e,
+                )
+                time.sleep(0.35)
+            except Exception as e:
+                try:
+                    if conn is not None:
+                        conn.rollback()
+                except Exception:
+                    pass
+                logger.warning("portfolio restore failed: %s", e)
+                return False, 0, f"Blad przy przywracaniu portfela: {e}"
+            finally:
+                if conn is not None:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+        logger.warning("portfolio restore exhausted retries: %s", last_lock)
+        return (
+            False,
+            0,
+            "Baza SQLite jest zablokowana (timeout). Harmonogram odswiezania cen trzyma polaczenia — "
+            "sprobuj ponownie za chwile, albo uzyj scripts/restore-portfolio-db-file.ps1 przy wylaczonym serwerze.",
+        )
     finally:
-        if conn is not None:
-            try:
-                conn.close()
-            except Exception:
-                pass
         try:
             tmp_path.unlink(missing_ok=True)
         except OSError:

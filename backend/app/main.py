@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
@@ -514,7 +515,23 @@ def backups_portfolio_create():
 
 @app.post("/api/backups/portfolio/restore", response_model=BackupRestoreOut)
 def backups_portfolio_restore(body: BackupRestoreIn):
-    ok, records, msg = restore_portfolio_from_backup(body.file_name)
+    # Harmonogram trzyma SessionLocal na czas jobów — pauza zwalnia blokady na portfolio.db.
+    paused = False
+    if os.getenv("SKIP_SCHEDULER") != "1":
+        try:
+            scheduler.pause()
+            paused = True
+            time.sleep(1.0)
+        except Exception as e:
+            logger.warning("scheduler pause before portfolio restore: %s", e)
+    try:
+        ok, records, msg = restore_portfolio_from_backup(body.file_name)
+    finally:
+        if paused:
+            try:
+                scheduler.resume()
+            except Exception as e:
+                logger.warning("scheduler resume after portfolio restore: %s", e)
     if not ok:
         raise HTTPException(400, msg)
     return BackupRestoreOut(restored=True, message=msg, records=records)
