@@ -218,6 +218,34 @@ def _table_exists(conn: sqlite3.Connection, db_alias: str, table: str) -> bool:
     return cur.fetchone() is not None
 
 
+def _table_columns(conn: sqlite3.Connection, schema: str, table: str) -> list[str]:
+    """Nazwy kolumn w kolejności z PRAGMA table_info (tylko znane tabele przywracania)."""
+    if table not in _PORTFOLIO_TABLES:
+        raise ValueError(f"unexpected table: {table}")
+    if schema not in ("main", "srcdb"):
+        raise ValueError(schema)
+    cur = conn.execute(f"PRAGMA {schema}.table_info({table})")
+    return [str(r[1]) for r in cur.fetchall()]
+
+
+def _qident(name: str) -> str:
+    return '"' + name.replace('"', '""') + '"'
+
+
+def _copy_table_from_attached(conn: sqlite3.Connection, table: str) -> int:
+    """Kopiuj wiersze srcdb→main po części wspólnej kolumn (różne wersje schematu SQLite)."""
+    main_cols = _table_columns(conn, "main", table)
+    src_col_set = set(_table_columns(conn, "srcdb", table))
+    common = [c for c in main_cols if c in src_col_set]
+    conn.execute(f"DELETE FROM {table}")
+    if not common:
+        return 0
+    cols_sql = ", ".join(_qident(c) for c in common)
+    conn.execute(f"INSERT INTO {table} ({cols_sql}) SELECT {cols_sql} FROM srcdb.{table}")
+    row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+    return int(row[0] if row else 0)
+
+
 def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     dbp = _sqlite_db_path()
     folder = _portfolio_dir()
@@ -254,10 +282,7 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
             for table in _PORTFOLIO_TABLES:
                 if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
                     continue
-                conn.execute(f"DELETE FROM {table}")
-                conn.execute(f"INSERT INTO {table} SELECT * FROM srcdb.{table}")
-                row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
-                copied_rows += int(row[0] if row else 0)
+                copied_rows += _copy_table_from_attached(conn, table)
             conn.execute("DETACH DATABASE srcdb")
         except Exception:
             try:

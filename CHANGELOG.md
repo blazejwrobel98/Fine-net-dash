@@ -8,6 +8,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - Przy błędzie blokady SQLite komunikat z sugestią zatrzymania zadania harmonogramu lub użycia skryptu `scripts/restore-portfolio-db-file.ps1`.
 - Nowy skrypt **`scripts/restore-portfolio-db-file.ps1`**: podmiana całego `portfolio.db` z pobranej kopii przy wyłączonym serwerze (najpewniejsze przy „database is locked”).
 - Przywracanie portfela z UI: przed `ATTACH` zwalniany jest **pool SQLAlchemy** (`engine.dispose()`), kopia źródłowa jest **kopiowana do pliku tymczasowego** (unika błędu `database srcdb is locked` na Windows), zwiększony **timeout** połączenia do głównej bazy.
+- Przywracanie portfela: kopiowanie wierszy po **wspólnej liście kolumn** (zamiast `SELECT *`), żeby starsze kopie SQLite nie wywalały błędu typu „N kolumn ale M wartości” przy nowszym schemacie (np. `price_cache`).
 
 ## [0.3.0] — 2026-05-08
 
