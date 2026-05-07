@@ -5,7 +5,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 ## [Unreleased]
 
 - **CI / release (GitHub Actions):** `actions/checkout` **v6**, `docker/setup-buildx-action` **v4**, `docker/metadata-action` **v6**, `docker/build-push-action` **v7** (zbieżnie z otwartymi PR Dependabot 1–4).
-- **Frontend:** `@types/react` **^18.3.28**, `@types/react-dom` **^18.3.7** (ostatnie typy w linii React 18; PR 10/13).
+- **Frontend:** React **19** (`react`, `react-dom`, `@types/react`, `@types/react-dom`; PR 10/13).
 
 ## [0.3.2] — 2026-05-09
 
