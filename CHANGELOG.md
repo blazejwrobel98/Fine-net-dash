@@ -10,6 +10,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - Przywracanie portfela z UI: przed `ATTACH` zwalniany jest **pool SQLAlchemy** (`engine.dispose()`), kopia źródłowa jest **kopiowana do pliku tymczasowego** (unika błędu `database srcdb is locked` na Windows), zwiększony **timeout** połączenia do głównej bazy.
 - Przywracanie portfela: kopiowanie wierszy po **wspólnej liście kolumn** (zamiast `SELECT *`), żeby starsze kopie SQLite nie wywalały błędu typu „N kolumn ale M wartości” przy nowszym schemacie (np. `price_cache`).
 - Przywracanie portfela z UI: **`scheduler.pause()`** na czas operacji (zwalnia joby odświeżania cen), **ponowienia** przy `database is locked` (~12 s), usuwanie pliku roboczego `.restore-work-*.db` w `finally`.
+- Lista kopii portfela: pliki **`*before_restore*`** trafiają **na koniec** listy (wcześniej były zawsze najnowsze i lądowały jako domyślny wybór w UI — łatwo było „przywrócić” właśnie złą, świeżą kopię zamiast pobranej dobrej). UI + krótka podpowiedź w ustawieniach.
 
 ## [0.3.0] — 2026-05-08
 

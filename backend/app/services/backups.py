@@ -97,7 +97,15 @@ def list_portfolio_backups() -> list[dict]:
     folder = _portfolio_dir()
     if folder is None or not folder.exists():
         return []
-    files = sorted(folder.glob("portfolio-*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    # `*-before_restore.db` jest zawsze „najnowszy” (tworzony sekundę przed przywróceniem) — to kopia
+    # obecnego (często złego) stanu. Nie może być pierwszy na liście, bo UI domyślnie wybiera [0].
+    files = sorted(
+        folder.glob("portfolio-*.db"),
+        key=lambda p: (
+            1 if "before_restore" in p.name else 0,
+            -p.stat().st_mtime,
+        ),
+    )
     return [_file_meta(p, "portfolio") for p in files]
 
 

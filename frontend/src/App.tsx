@@ -466,7 +466,11 @@ export default function App() {
       const [p, pr] = await Promise.all([api.listPortfolioBackups(), api.listPricesBackups()]);
       setPortfolioBackups(p.files);
       setPricesBackups(pr.files);
-      if (p.files.length && !selectedPortfolioBackup) setSelectedPortfolioBackup(p.files[0].file_name);
+      if (p.files.length && !selectedPortfolioBackup) {
+        const preferred =
+          p.files.find((f) => !f.file_name.includes("before_restore")) ?? p.files[0];
+        setSelectedPortfolioBackup(preferred.file_name);
+      }
       if (pr.files.length && !selectedPricesBackup) setSelectedPricesBackup(pr.files[0].file_name);
     } catch (e) {
       setErr(String(e));
@@ -1279,6 +1283,10 @@ export default function App() {
             <h2>Kopie zapasowe</h2>
             <p className="muted" style={{ marginBottom: "0.5rem" }}>
               Osobne kopie: portfel oraz lista spółek.
+            </p>
+            <p className="muted" style={{ marginBottom: "0.65rem", fontSize: "0.82rem" }}>
+              Pliki <strong>*before_restore*</strong> to automatyczna migawka <strong>tuż przed</strong> ostatnim
+              przywróceniem (stan z tej chwili) — zwykle nie chcesz ich przywracać, jeśli szukasz starszej dobrej kopii.
             </p>
 
             <div className="backup-block">
