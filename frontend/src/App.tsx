@@ -91,6 +91,7 @@ type UniverseSortKey =
   | "region"
   | "price"
   | "dividend"
+  | "dividend_forward"
   | "change"
   | "avg_price_period"
   | "notes";
@@ -125,6 +126,8 @@ function compareUniverseRows(
       return num(a.price, b.price);
     case "dividend":
       return num(a.dividend_yield_pct, b.dividend_yield_pct);
+    case "dividend_forward":
+      return num(a.dividend_yield_forward_pct, b.dividend_yield_forward_pct);
     case "change":
       return num(pickChange(a, trendPeriod), pickChange(b, trendPeriod));
     case "avg_price_period":
@@ -796,7 +799,13 @@ export default function App() {
                     ascending={universeSort.asc}
                     onSort={onUniverseSort}
                   />
-                  <th>Dywidenda % (plan.)</th>
+                  <SortTh
+                    label="Dywidenda % (plan.)"
+                    sortKey="dividend_forward"
+                    activeKey={universeSort.key}
+                    ascending={universeSort.asc}
+                    onSort={onUniverseSort}
+                  />
                   <SortTh
                     label={`Zwrot ${periodLabel(trendPeriod)}`}
                     sortKey="change"

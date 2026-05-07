@@ -11,6 +11,8 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - Backend/API: nowe pole `dividend_yield_forward_pct` w cache cen, schemach i odpowiedzi `/api/universe`.
 - Forward dywidendy: fallback parsowania `dividendRate` z HTML Yahoo, gdy endpoint quote zwraca puste dane / 429.
 - Forward dywidendy: poprawka regexu dla danych osadzonych jako escaped JSON (`\"dividendRate\"`) na stronie Yahoo.
+- Forward dywidendy: dodatkowy fallback na `trailingAnnualDividendRate`, gdy `dividendRate` (planowana) nie jest dostępna.
+- UI Universe: sortowanie po kolumnie **Dywidenda % (plan.)**.
 
 ## [0.2.2] — 2026-05-05
 

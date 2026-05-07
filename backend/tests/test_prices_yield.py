@@ -79,3 +79,18 @@ def test_forward_dividend_rate_from_html_parses_raw_value(monkeypatch: pytest.Mo
 
     monkeypatch.setattr(prices._YF_SESSION, "get", fake_get)
     assert _fetch_forward_dividend_rate_from_html("SWED-A.ST") == pytest.approx(20.45)
+
+
+def test_forward_dividend_rate_from_html_falls_back_to_trailing(monkeypatch: pytest.MonkeyPatch):
+    class FakeResp:
+        status_code = 200
+        text = '<html>..."trailingAnnualDividendRate":{"raw":7.25,"fmt":"7.25"}...</html>'
+
+        def raise_for_status(self):
+            return None
+
+    def fake_get(url: str, timeout: int = 25):  # noqa: ARG001
+        return FakeResp()
+
+    monkeypatch.setattr(prices._YF_SESSION, "get", fake_get)
+    assert _fetch_forward_dividend_rate_from_html("KO") == pytest.approx(7.25)

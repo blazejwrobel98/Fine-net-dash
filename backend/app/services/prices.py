@@ -40,6 +40,9 @@ _YF_SESSION = _yf_session()
 _DIVIDEND_RATE_RE = re.compile(
     r'(?:\\"|")dividendRate(?:\\"|")\s*:\s*(?:\\"|")?\{(?:\\"|")raw(?:\\"|")\s*:\s*([0-9]+(?:\.[0-9]+)?)'
 )
+_TRAILING_DIVIDEND_RATE_RE = re.compile(
+    r'(?:\\"|")trailingAnnualDividendRate(?:\\"|")\s*:\s*(?:\\"|")?\{(?:\\"|")raw(?:\\"|")\s*:\s*([0-9]+(?:\.[0-9]+)?)'
+)
 
 
 def _yahoo_chart_range(period: str) -> str:
@@ -146,6 +149,11 @@ def _fetch_forward_dividend_rate_map(tickers: list[str]) -> dict[str, float]:
                 rate = float(row.get("dividendRate"))
             except (TypeError, ValueError):
                 rate = 0.0
+            if rate <= 0:
+                try:
+                    rate = float(row.get("trailingAnnualDividendRate"))
+                except (TypeError, ValueError):
+                    rate = 0.0
             if rate > 0:
                 out[t] = rate
     return out
@@ -163,7 +171,10 @@ def _fetch_forward_dividend_rate_from_html(ticker: str) -> float | None:
     try:
         r = _YF_SESSION.get(url, timeout=25)
         r.raise_for_status()
-        m = _DIVIDEND_RATE_RE.search(r.text or "")
+        text = r.text or ""
+        m = _DIVIDEND_RATE_RE.search(text)
+        if not m:
+            m = _TRAILING_DIVIDEND_RATE_RE.search(text)
         if not m:
             return None
         val = float(m.group(1))
