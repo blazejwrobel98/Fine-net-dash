@@ -4,6 +4,16 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-08
+
+- **UI:** przebudowa interfejsu (shell 2026): sidebar na desktopie, dolna nawigacja na mobile, typografia Plus Jakarta Sans + JetBrains Mono.
+- **UI:** tryb **ciemny / jasny** z zapisem w `localStorage` i wczesnym skryptem w `index.html` (mniej migania przy starcie).
+- **UI:** toasty na błędy i komunikaty statusu zamiast dużych bloków na górze strony.
+- **UI:** nawigacja z ikonami (**lucide-react**), spójne karty, tabele i siatka metryk w portfelu.
+- **Wykresy:** kolory osi i datasetów dopasowane do aktywnego motywu (`chartTheme.ts` + prop `colorScheme` w `ChartsPanel`).
+- **DX:** `package.json` w korzeniu repozytorium — `npm run dev` / `build` z głównego katalogu deleguje do `frontend/`.
+- **UI:** wyrównanie przycisków z polami w poziomych rzędach (wyłączenie dolnego marginesu `.field` w `.row`).
+
 ## [0.2.3] — 2026-05-07
 
 - Waluty tickerów Yahoo: poprawione mapowanie `.ST` -> `SEK` (np. `SWED-A.ST` nie jest już oznaczany jako `EUR`).
