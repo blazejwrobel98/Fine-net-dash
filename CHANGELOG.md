@@ -4,13 +4,14 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
-- Przywracanie portfela z kopii (`/api/backups/portfolio/restore`): kopiowane są też **universe_stocks**, **price_cache**, **app_settings**, **alert_cooldowns** (wcześniej tylko loty / sprzedaże / wpłaty / dywidendy / snapshoty — brak „spółek” w cache i ustawień).
-- Przy błędzie blokady SQLite komunikat z sugestią zatrzymania zadania harmonogramu lub użycia skryptu `scripts/restore-portfolio-db-file.ps1`.
-- Nowy skrypt **`scripts/restore-portfolio-db-file.ps1`**: podmiana całego `portfolio.db` z pobranej kopii przy wyłączonym serwerze (najpewniejsze przy „database is locked”).
-- Przywracanie portfela z UI: przed `ATTACH` zwalniany jest **pool SQLAlchemy** (`engine.dispose()`), kopia źródłowa jest **kopiowana do pliku tymczasowego** (unika błędu `database srcdb is locked` na Windows), zwiększony **timeout** połączenia do głównej bazy.
-- Przywracanie portfela: kopiowanie wierszy po **wspólnej liście kolumn** (zamiast `SELECT *`), żeby starsze kopie SQLite nie wywalały błędu typu „N kolumn ale M wartości” przy nowszym schemacie (np. `price_cache`).
-- Przywracanie portfela z UI: **`scheduler.pause()`** na czas operacji (zwalnia joby odświeżania cen), **ponowienia** przy `database is locked` (~12 s), usuwanie pliku roboczego `.restore-work-*.db` w `finally`.
-- Lista kopii portfela: pliki **`*before_restore*`** trafiają **na koniec** listy (wcześniej były zawsze najnowsze i lądowały jako domyślny wybór w UI — łatwo było „przywrócić” właśnie złą, świeżą kopię zamiast pobranej dobrej). UI + krótka podpowiedź w ustawieniach.
+## [0.3.1] — 2026-05-08
+
+- **Kopie i przywracanie portfela:** przywracanie z UI przez **`sqlite3.Connection.backup`** (pełna zawartość pliku kopii), **`scheduler.pause()`** na czas operacji, **ponowienia** przy `database is locked`, zwalnianie poola SQLAlchemy (`engine.dispose()`), kopia źródłowa do pliku tymczasowego (stabilniej na Windows).
+- **Lista kopii portfela:** pliki **`*before_restore*`** na **końcu** listy; w API i selectcie UI **liczba lotów**; sortowanie pod kątem przywrócenia; wyższa domyślna **retencja** kopii (`portfolio_backup_versions` = 15).
+- **Windows instalacja:** `robocopy` z **`/XF portfolio.db`** (żeby nie nadpisywać bazy z drzewa źródłowego) oraz **`/IS` `/IT`**; po zatrzymaniu zadania harmonogramu — **zabicie** `python.exe` z venv instalacji przed kopiowaniem plików.
+- **`scripts/restore-portfolio-db-file.ps1`:** podmiana całego `portfolio.db` offline; walidacja kopii przez tymczasowy skrypt Pythona (niezawodniej niż `python -c` w PowerShell); skrypt dołączany do wyjścia **`build-release`**.
+- **`migrate_portfolio_db`:** bez **`--force`** nie modyfikuje celu, gdy SQLite zwraca nieczytelną bazę.
+- Przy błędzie blokady przy przywracaniu z UI: komunikat z sugestią zatrzymania zadania harmonogramu lub użycia `restore-portfolio-db-file.ps1`.
 
 ## [0.3.0] — 2026-05-08
 
