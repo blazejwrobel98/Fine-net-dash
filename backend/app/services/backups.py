@@ -57,6 +57,14 @@ def _safe_reason(v: str) -> str:
     return s or "manual"
 
 
+def _safe_import_name(v: str) -> str:
+    n = Path(v or "").name
+    stem = Path(n).stem
+    s = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in stem)
+    s = s.strip("_")
+    return s or "file"
+
+
 def _rotate_keep_latest(folder: Path, pattern: str, keep: int) -> None:
     if keep < 1:
         keep = 1
@@ -99,6 +107,72 @@ def _resolve_backup_file(folder: Path, file_name: str) -> Path:
     if folder.resolve() not in path.parents or not path.is_file():
         raise FileNotFoundError(file_name)
     return path
+
+
+def resolve_portfolio_backup_file(file_name: str) -> Path:
+    folder = _portfolio_dir()
+    if folder is None:
+        raise FileNotFoundError(file_name)
+    return _resolve_backup_file(folder, file_name)
+
+
+def resolve_prices_backup_file(file_name: str) -> Path:
+    folder = _prices_snapshot_dir()
+    if folder is None:
+        raise FileNotFoundError(file_name)
+    return _resolve_backup_file(folder, file_name)
+
+
+def import_portfolio_backup_file(file_name: str, content: bytes) -> tuple[bool, str]:
+    folder = _portfolio_dir()
+    if folder is None:
+        return False, "Brak katalogu backupow portfela."
+    folder.mkdir(parents=True, exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out = folder / f"portfolio-{ts}-imported-{_safe_import_name(file_name)}.db"
+    try:
+        out.write_bytes(content)
+        con = sqlite3.connect(str(out))
+        try:
+            row = con.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='purchase_lots'"
+            ).fetchone()
+        finally:
+            con.close()
+        if not row or int(row[0] or 0) == 0:
+            out.unlink(missing_ok=True)
+            return False, "Plik nie wyglada na backup portfela SQLite (brak tabeli purchase_lots)."
+        return True, out.name
+    except Exception as e:
+        try:
+            out.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return False, f"Import backupu portfela nie powiodl sie: {e}"
+
+
+def import_prices_backup_file(file_name: str, content: bytes) -> tuple[bool, str]:
+    folder = _prices_snapshot_dir()
+    if folder is None:
+        return False, "Brak katalogu backupow listy spolek."
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        payload = json.loads(content.decode("utf-8"))
+    except Exception as e:
+        return False, f"Niepoprawny JSON backupu listy spolek: {e}"
+    if not isinstance(payload, dict):
+        return False, "Niepoprawny format backupu listy spolek (oczekiwany obiekt JSON)."
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out = folder / f"prices-snapshot-{ts}-imported-{_safe_import_name(file_name)}.json"
+    try:
+        out.write_text(json.dumps(payload, ensure_ascii=True, separators=(",", ":")), encoding="utf-8")
+        return True, out.name
+    except Exception as e:
+        try:
+            out.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return False, f"Import backupu listy spolek nie powiodl sie: {e}"
 
 
 def backup_portfolio_now(reason: str = "manual") -> Path | None:
@@ -182,6 +256,7 @@ def _price_row_payload(r: PriceCache) -> dict:
         "price": r.price,
         "currency": r.currency,
         "dividend_yield_pct": r.dividend_yield_pct,
+        "dividend_yield_forward_pct": getattr(r, "dividend_yield_forward_pct", None),
         "change_1d_pct": r.change_1d_pct,
         "change_1w_pct": r.change_1w_pct,
         "change_1m_pct": r.change_1m_pct,
@@ -313,6 +388,7 @@ def restore_prices_from_snapshot(db: Session, file_name: str) -> tuple[bool, int
         row.price = float(price)
         row.currency = row_payload.get("currency")
         row.dividend_yield_pct = row_payload.get("dividend_yield_pct")
+        row.dividend_yield_forward_pct = row_payload.get("dividend_yield_forward_pct")
         row.change_1d_pct = row_payload.get("change_1d_pct")
         row.change_1w_pct = row_payload.get("change_1w_pct")
         row.change_1m_pct = row_payload.get("change_1m_pct")

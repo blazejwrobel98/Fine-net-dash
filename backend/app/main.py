@@ -6,8 +6,9 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy import select
@@ -48,8 +49,12 @@ from app.services.backups import (
     backup_portfolio_now,
     backup_price_history_incremental_daily,
     backup_price_history_snapshot_now,
+    import_portfolio_backup_file,
+    import_prices_backup_file,
     list_portfolio_backups,
     list_prices_backups,
+    resolve_portfolio_backup_file,
+    resolve_prices_backup_file,
     restore_portfolio_from_backup,
     restore_prices_from_snapshot,
 )
@@ -515,6 +520,25 @@ def backups_portfolio_restore(body: BackupRestoreIn):
     return BackupRestoreOut(restored=True, message=msg, records=records)
 
 
+@app.get("/api/backups/portfolio/export/{file_name}")
+def backups_portfolio_export(file_name: str):
+    try:
+        path = resolve_portfolio_backup_file(file_name)
+    except FileNotFoundError:
+        raise HTTPException(404, "Nie znaleziono wskazanej kopii portfela.")
+    return FileResponse(path, media_type="application/octet-stream", filename=path.name)
+
+
+@app.post("/api/backups/portfolio/import", response_model=BackupCreateOut)
+async def backups_portfolio_import(file: UploadFile = File(...)):
+    name = file.filename or "portfolio-import.db"
+    data = await file.read()
+    ok, msg = import_portfolio_backup_file(name, data)
+    if not ok:
+        raise HTTPException(400, msg)
+    return BackupCreateOut(created=True, file_name=msg, message="Zaimportowano kopie portfela.")
+
+
 @app.get("/api/backups/prices", response_model=BackupListOut)
 def backups_prices_list():
     return BackupListOut(files=list_prices_backups())
@@ -534,6 +558,25 @@ def backups_prices_restore(body: BackupRestoreIn, db: Session = Depends(get_db))
     if not ok:
         raise HTTPException(400, msg)
     return BackupRestoreOut(restored=True, message=msg, records=records)
+
+
+@app.get("/api/backups/prices/export/{file_name}")
+def backups_prices_export(file_name: str):
+    try:
+        path = resolve_prices_backup_file(file_name)
+    except FileNotFoundError:
+        raise HTTPException(404, "Nie znaleziono wskazanej kopii listy spolek.")
+    return FileResponse(path, media_type="application/json", filename=path.name)
+
+
+@app.post("/api/backups/prices/import", response_model=BackupCreateOut)
+async def backups_prices_import(file: UploadFile = File(...)):
+    name = file.filename or "prices-import.json"
+    data = await file.read()
+    ok, msg = import_prices_backup_file(name, data)
+    if not ok:
+        raise HTTPException(400, msg)
+    return BackupCreateOut(created=True, file_name=msg, message="Zaimportowano kopie listy spolek.")
 
 
 @app.get("/api/wallet/summary", response_model=WalletSummaryOut)

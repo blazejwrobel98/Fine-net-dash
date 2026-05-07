@@ -93,8 +93,7 @@ type UniverseSortKey =
   | "dividend"
   | "dividend_forward"
   | "change"
-  | "avg_price_period"
-  | "notes";
+  | "avg_price_period";
 
 function compareUniverseRows(
   a: UniverseRow,
@@ -132,8 +131,6 @@ function compareUniverseRows(
       return num(pickChange(a, trendPeriod), pickChange(b, trendPeriod));
     case "avg_price_period":
       return num(pickAvgPrice(a, trendPeriod), pickAvgPrice(b, trendPeriod));
-    case "notes":
-      return str(a.notes ?? "", b.notes ?? "");
     default:
       return 0;
   }
@@ -194,6 +191,8 @@ export default function App() {
   const [pricesBackups, setPricesBackups] = useState<BackupFile[]>([]);
   const [selectedPortfolioBackup, setSelectedPortfolioBackup] = useState<string>("");
   const [selectedPricesBackup, setSelectedPricesBackup] = useState<string>("");
+  const [portfolioImportFile, setPortfolioImportFile] = useState<File | null>(null);
+  const [pricesImportFile, setPricesImportFile] = useState<File | null>(null);
   const [serverBuild, setServerBuild] = useState<string | null>(null);
 
   const loadCore = useCallback(async () => {
@@ -396,6 +395,40 @@ export default function App() {
     }
   }
 
+  async function onExportPortfolioBackup() {
+    if (!selectedPortfolioBackup) {
+      setErr("Wybierz kopię portfela do eksportu.");
+      return;
+    }
+    try {
+      const blob = await api.exportPortfolioBackup(selectedPortfolioBackup);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = selectedPortfolioBackup;
+      a.click();
+      URL.revokeObjectURL(url);
+      setRefreshMsg(`Pobrano kopię portfela: ${selectedPortfolioBackup}`);
+    } catch (e) {
+      setErr(String(e));
+    }
+  }
+
+  async function onImportPortfolioBackup() {
+    if (!portfolioImportFile) {
+      setErr("Wybierz plik kopii portfela do importu.");
+      return;
+    }
+    try {
+      const r = await api.importPortfolioBackup(portfolioImportFile);
+      setRefreshMsg(r.message);
+      setPortfolioImportFile(null);
+      await loadBackupLists();
+    } catch (e) {
+      setErr(String(e));
+    }
+  }
+
   async function onRestorePortfolioBackup() {
     if (!selectedPortfolioBackup) {
       setErr("Wybierz kopię portfela do przywrócenia.");
@@ -419,6 +452,40 @@ export default function App() {
     try {
       const r = await api.createPricesBackup();
       setRefreshMsg(r.message);
+      await loadBackupLists();
+    } catch (e) {
+      setErr(String(e));
+    }
+  }
+
+  async function onExportPricesBackup() {
+    if (!selectedPricesBackup) {
+      setErr("Wybierz kopię listy spółek do eksportu.");
+      return;
+    }
+    try {
+      const blob = await api.exportPricesBackup(selectedPricesBackup);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = selectedPricesBackup;
+      a.click();
+      URL.revokeObjectURL(url);
+      setRefreshMsg(`Pobrano kopię listy spółek: ${selectedPricesBackup}`);
+    } catch (e) {
+      setErr(String(e));
+    }
+  }
+
+  async function onImportPricesBackup() {
+    if (!pricesImportFile) {
+      setErr("Wybierz plik kopii listy spółek do importu.");
+      return;
+    }
+    try {
+      const r = await api.importPricesBackup(pricesImportFile);
+      setRefreshMsg(r.message);
+      setPricesImportFile(null);
       await loadBackupLists();
     } catch (e) {
       setErr(String(e));
@@ -820,13 +887,6 @@ export default function App() {
                     ascending={universeSort.asc}
                     onSort={onUniverseSort}
                   />
-                  <SortTh
-                    label="Notatka"
-                    sortKey="notes"
-                    activeKey={universeSort.key}
-                    ascending={universeSort.asc}
-                    onSort={onUniverseSort}
-                  />
                 </tr>
               </thead>
               <tbody>
@@ -864,7 +924,6 @@ export default function App() {
                         <span className="muted">—</span>
                       )}
                     </td>
-                    <td className="muted">{s.notes ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1121,8 +1180,21 @@ export default function App() {
               <button type="button" className="btn btn-ghost" onClick={() => void onCreatePortfolioBackup()}>
                 Wymuś kopię portfela
               </button>
+              <button type="button" className="btn btn-ghost" onClick={() => void onExportPortfolioBackup()}>
+                Eksportuj wybraną
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => void onRestorePortfolioBackup()}>
                 Przywróć portfel
+              </button>
+            </div>
+            <div className="row" style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              <input
+                type="file"
+                accept=".db,application/octet-stream"
+                onChange={(e) => setPortfolioImportFile(e.target.files?.[0] ?? null)}
+              />
+              <button type="button" className="btn btn-ghost" onClick={() => void onImportPortfolioBackup()}>
+                Importuj kopię portfela
               </button>
             </div>
 
@@ -1149,8 +1221,21 @@ export default function App() {
               <button type="button" className="btn btn-ghost" onClick={() => void onCreatePricesBackup()}>
                 Wymuś kopię listy spółek
               </button>
+              <button type="button" className="btn btn-ghost" onClick={() => void onExportPricesBackup()}>
+                Eksportuj wybraną
+              </button>
               <button type="button" className="btn btn-primary" onClick={() => void onRestorePricesBackup()}>
                 Przywróć listę spółek
+              </button>
+            </div>
+            <div className="row" style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.5rem", flexWrap: "wrap" }}>
+              <input
+                type="file"
+                accept=".json,application/json"
+                onChange={(e) => setPricesImportFile(e.target.files?.[0] ?? null)}
+              />
+              <button type="button" className="btn btn-ghost" onClick={() => void onImportPricesBackup()}>
+                Importuj kopię listy spółek
               </button>
             </div>
           </div>

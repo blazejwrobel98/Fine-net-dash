@@ -292,6 +292,19 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file_name: fileName }),
     }).then((r) => j<BackupActionResponse>(r)),
+  exportPortfolioBackup: async (fileName: string): Promise<Blob> => {
+    const r = await fetch(`${base}/api/backups/portfolio/export/${encodeURIComponent(fileName)}`);
+    if (!r.ok) throw new Error(await r.text());
+    return r.blob();
+  },
+  importPortfolioBackup: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${base}/api/backups/portfolio/import`, {
+      method: "POST",
+      body: fd,
+    }).then((r) => j<BackupActionResponse>(r));
+  },
   listPricesBackups: () => fetch(`${base}/api/backups/prices`).then((r) => j<BackupListResponse>(r)),
   createPricesBackup: () =>
     fetch(`${base}/api/backups/prices/create`, { method: "POST" }).then((r) =>
@@ -303,6 +316,19 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file_name: fileName }),
     }).then((r) => j<BackupActionResponse>(r)),
+  exportPricesBackup: async (fileName: string): Promise<Blob> => {
+    const r = await fetch(`${base}/api/backups/prices/export/${encodeURIComponent(fileName)}`);
+    if (!r.ok) throw new Error(await r.text());
+    return r.blob();
+  },
+  importPricesBackup: (file: File) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch(`${base}/api/backups/prices/import`, {
+      method: "POST",
+      body: fd,
+    }).then((r) => j<BackupActionResponse>(r));
+  },
 };
 
 export type TimelinePayload = {

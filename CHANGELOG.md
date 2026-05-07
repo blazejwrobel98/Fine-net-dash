@@ -13,6 +13,9 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - Forward dywidendy: poprawka regexu dla danych osadzonych jako escaped JSON (`\"dividendRate\"`) na stronie Yahoo.
 - Forward dywidendy: dodatkowy fallback na `trailingAnnualDividendRate`, gdy `dividendRate` (planowana) nie jest dostępna.
 - UI Universe: sortowanie po kolumnie **Dywidenda % (plan.)**.
+- UI Universe: usunięta kolumna **Notatka**.
+- Ustawienia -> Kopie zapasowe: dodane **eksport** i **import** backupów (portfel `.db`, lista spółek `.json`).
+- API backupów: nowe endpointy export/import dla portfela i listy spółek.
 
 ## [0.2.2] — 2026-05-05
 
