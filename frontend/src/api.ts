@@ -153,6 +153,8 @@ export type BackupFile = {
   size_bytes: number;
   created_at: string;
   kind: string;
+  /** Kopie portfela (.db); null dla kopii listy spółek (JSON). */
+  purchase_lots_count?: number | null;
 };
 
 export type BackupListResponse = {

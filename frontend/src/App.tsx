@@ -467,6 +467,7 @@ export default function App() {
       setPortfolioBackups(p.files);
       setPricesBackups(pr.files);
       if (p.files.length && !selectedPortfolioBackup) {
+        // Lista z API: najpierw kopie z największą liczbą lotów, na końcu *before_restore*.
         const preferred =
           p.files.find((f) => !f.file_name.includes("before_restore")) ?? p.files[0];
         setSelectedPortfolioBackup(preferred.file_name);
@@ -1301,6 +1302,7 @@ export default function App() {
                   {portfolioBackups.map((b) => (
                     <option key={b.file_name} value={b.file_name}>
                       {new Date(b.created_at).toLocaleString("pl-PL")} | {(b.size_bytes / 1024).toFixed(1)} KB |{" "}
+                      {b.purchase_lots_count != null ? `${b.purchase_lots_count} lot. | ` : ""}
                       {b.file_name}
                     </option>
                   ))}

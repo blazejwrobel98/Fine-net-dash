@@ -233,6 +233,35 @@ def test_delete_lot_404(client: TestClient):
     assert client.delete("/api/lots/999999999").status_code == 404
 
 
+def test_portfolio_backup_list_lot_counts_and_restore_roundtrip(client: TestClient):
+    """Kopie zwracają purchase_lots_count; przywrócenie odtwarza pełną zawartość pliku kopii (sqlite backup)."""
+    a, b = "BKRPLCNT", "BKRPLCN2"
+    client.post("/api/lots", json={"ticker": a, "quantity": 1.0, "price_per_share": 10.0, "side": "buy"})
+    client.post("/api/lots", json={"ticker": b, "quantity": 2.0, "price_per_share": 5.0, "side": "buy"})
+    lots_before = client.get("/api/lots").json()
+    n_before = len(lots_before)
+    cr = client.post("/api/backups/portfolio/create")
+    assert cr.status_code == 200
+    fname = cr.json()["file_name"]
+    assert fname
+
+    lst = client.get("/api/backups/portfolio")
+    assert lst.status_code == 200
+    meta = next(f for f in lst.json()["files"] if f["file_name"] == fname)
+    assert meta.get("purchase_lots_count") == n_before
+
+    lid = lots_before[0]["id"]
+    assert client.delete(f"/api/lots/{lid}").status_code == 200
+    assert len(client.get("/api/lots").json()) == n_before - 1
+
+    rr = client.post("/api/backups/portfolio/restore", json={"file_name": fname})
+    assert rr.status_code == 200
+    restored = client.get("/api/lots").json()
+    assert len(restored) == n_before
+    tickers = {x["ticker"] for x in restored}
+    assert a in tickers and b in tickers
+
+
 def test_static_index_when_dist_present(client: TestClient):
     """Gdy w repo jest frontend/dist, '/' serwuje SPA; w CI sam backend — opcjonalnie 404."""
     r = client.get("/")

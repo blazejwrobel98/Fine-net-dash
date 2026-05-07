@@ -83,30 +83,53 @@ def _rotate_keep_latest(folder: Path, pattern: str, keep: int) -> None:
             logger.warning("backup rotate unlink %s: %s", old, e)
 
 
-def _file_meta(path: Path, kind: str) -> dict:
+def _file_meta(path: Path, kind: str, purchase_lots_count: int | None = None) -> dict:
     st = path.stat()
     return {
         "file_name": path.name,
         "size_bytes": int(st.st_size),
         "created_at": datetime.fromtimestamp(st.st_mtime, tz=timezone.utc),
         "kind": kind,
+        "purchase_lots_count": purchase_lots_count,
     }
+
+
+def _count_purchase_lots_in_file(path: Path) -> int | None:
+    """Liczba wierszy purchase_lots w pliku SQLite; None przy błędzie odczytu."""
+    try:
+        con = sqlite3.connect(str(path), timeout=3.0)
+        try:
+            row = con.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='purchase_lots'"
+            ).fetchone()
+            if not row or int(row[0] or 0) == 0:
+                return 0
+            n = con.execute("SELECT COUNT(*) FROM purchase_lots").fetchone()
+            return int(n[0]) if n is not None else 0
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return None
 
 
 def list_portfolio_backups() -> list[dict]:
     folder = _portfolio_dir()
     if folder is None or not folder.exists():
         return []
-    # `*-before_restore.db` jest zawsze „najnowszy” (tworzony sekundę przed przywróceniem) — to kopia
-    # obecnego (często złego) stanu. Nie może być pierwszy na liście, bo UI domyślnie wybiera [0].
-    files = sorted(
-        folder.glob("portfolio-*.db"),
-        key=lambda p: (
-            1 if "before_restore" in p.name else 0,
-            -p.stat().st_mtime,
-        ),
-    )
-    return [_file_meta(p, "portfolio") for p in files]
+    # `*-before_restore.db` — migawka tuż przed przywróceniem (często „zły” stan): na końcu listy.
+    # Wśród pozostałych: więcej lotów wyżej, potem nowszy plik — domyślny wybór w UI trafia na sensowną kopię.
+    paths = list(folder.glob("portfolio-*.db"))
+    lot_counts = {p: _count_purchase_lots_in_file(p) for p in paths}
+
+    def sort_key(p: Path) -> tuple:
+        is_br = 1 if "before_restore" in p.name else 0
+        lots = lot_counts.get(p)
+        # Wyższa liczba lotów pierwsza: sortujemy rosnąco po ujemnej liczbie lotów.
+        lot_rank = -(lots if lots is not None else -10_000)
+        return (is_br, lot_rank, -p.stat().st_mtime)
+
+    files = sorted(paths, key=sort_key)
+    return [_file_meta(p, "portfolio", purchase_lots_count=lot_counts.get(p)) for p in files]
 
 
 def list_prices_backups() -> list[dict]:
@@ -255,6 +278,15 @@ def _copy_table_from_attached(conn: sqlite3.Connection, table: str) -> int:
     return int(row[0] if row else 0)
 
 
+def _total_portfolio_row_counts(conn: sqlite3.Connection) -> int:
+    total = 0
+    for table in _PORTFOLIO_TABLES:
+        if _table_exists(conn, "main", table):
+            row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+            total += int(row[0] if row else 0)
+    return total
+
+
 def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     dbp = _sqlite_db_path()
     folder = _portfolio_dir()
@@ -284,32 +316,22 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     try:
         for attempt in range(35):
             engine.dispose(close=True)
-            conn: sqlite3.Connection | None = None
-            copied_rows = 0
+            src_conn: sqlite3.Connection | None = None
+            dest_conn: sqlite3.Connection | None = None
             try:
-                conn = sqlite3.connect(str(dbp), timeout=60.0)
-                conn.execute("PRAGMA foreign_keys=OFF")
-                conn.execute("BEGIN IMMEDIATE")
-                conn.execute("ATTACH DATABASE ? AS srcdb", (str(tmp_path),))
-                try:
-                    for table in _PORTFOLIO_TABLES:
-                        if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
-                            continue
-                        copied_rows += _copy_table_from_attached(conn, table)
-                    conn.execute("DETACH DATABASE srcdb")
-                except Exception:
-                    try:
-                        conn.execute("DETACH DATABASE srcdb")
-                    except Exception:
-                        pass
-                    raise
-                conn.commit()
-                return True, copied_rows, f"Przywrocono dane portfela z kopii: {file_name}"
+                dest_conn = sqlite3.connect(str(dbp), timeout=60.0)
+                src_conn = sqlite3.connect(str(tmp_path), timeout=60.0)
+                # Pełna kopia stron z pliku kopii (1:1), zamiast ATTACH+DELETE+INSERT po tabelach
+                # (tam łatwo o rozjazd schematu / liczby wierszy vs oczekiwania użytkownika).
+                src_conn.backup(dest_conn)
+                dest_conn.commit()
+                records = _total_portfolio_row_counts(dest_conn)
+                return True, records, f"Przywrocono dane portfela z kopii: {file_name}"
             except sqlite3.OperationalError as e:
                 last_lock = str(e)
                 try:
-                    if conn is not None:
-                        conn.rollback()
+                    if dest_conn is not None:
+                        dest_conn.rollback()
                 except Exception:
                     pass
                 if "locked" not in str(e).lower():
@@ -324,16 +346,21 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
                 time.sleep(0.35)
             except Exception as e:
                 try:
-                    if conn is not None:
-                        conn.rollback()
+                    if dest_conn is not None:
+                        dest_conn.rollback()
                 except Exception:
                     pass
                 logger.warning("portfolio restore failed: %s", e)
                 return False, 0, f"Blad przy przywracaniu portfela: {e}"
             finally:
-                if conn is not None:
+                if src_conn is not None:
                     try:
-                        conn.close()
+                        src_conn.close()
+                    except Exception:
+                        pass
+                if dest_conn is not None:
+                    try:
+                        dest_conn.close()
                     except Exception:
                         pass
         logger.warning("portfolio restore exhausted retries: %s", last_lock)

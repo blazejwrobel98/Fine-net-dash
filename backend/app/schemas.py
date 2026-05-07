@@ -151,6 +151,8 @@ class BackupFileOut(BaseModel):
     size_bytes: int
     created_at: datetime
     kind: str
+    # Tylko kopie portfela SQLite; null dla listy spółek (JSON) lub gdy nie da się odczytać pliku.
+    purchase_lots_count: int | None = None
 
 
 class BackupListOut(BaseModel):

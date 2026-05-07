@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     # Pauza między tickerami przy odświeżaniu (Yahoo 429 przy zbyt wielu zapytaniach)
     yahoo_request_delay_seconds: float = 0.55
-    # Kopie portfela po każdej zmianie — ile ostatnich pełnych wersji trzymać.
-    portfolio_backup_versions: int = 3
+    # Kopie portfela po każdej zmianie — ile ostatnich pełnych wersji trzymać (niskie = szybkie usuwanie starych kopii z „większą” liczbą lotów).
+    portfolio_backup_versions: int = 15
     # Dzienny przyrostowy backup historii cen — retencja (dni).
     price_backup_keep_days: int = 120
     # Dokumentacja OpenAPI (/docs) — domyślnie wyłączona (bezpieczniejszy self-host). Dev: ENABLE_OPENAPI=1

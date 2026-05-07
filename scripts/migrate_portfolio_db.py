@@ -68,6 +68,9 @@ def main() -> int:
 
     target.parent.mkdir(parents=True, exist_ok=True)
     dst_lots = count_lots(target)
+    if dst_lots < 0:
+        print(f"migrate: cel {target} jest nieczytelny (SQLite) — nie ruszam bez --force.")
+        return 1
 
     if target.is_file() and dst_lots > 0 and not args.force:
         print(f"migrate: cel {target} juz ma {dst_lots} lotow — nie ruszam (uzyj --force aby nadpisac).")
