@@ -16,6 +16,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - UI Universe: usunięta kolumna **Notatka**.
 - Ustawienia -> Kopie zapasowe: dodane **eksport** i **import** backupów (portfel `.db`, lista spółek `.json`).
 - API backupów: nowe endpointy export/import dla portfela i listy spółek.
+- UI Ustawień: sekcja kopii zapasowych przebudowana na bardziej kompaktowy, stabilny layout (bez rozjeżdżania przy mniejszej szerokości).
 
 ## [0.2.2] — 2026-05-05
 

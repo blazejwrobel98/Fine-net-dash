@@ -1158,10 +1158,12 @@ export default function App() {
           <div className="card">
             <h2>Kopie zapasowe</h2>
             <p className="muted" style={{ marginBottom: "0.75rem" }}>
-              Portfel i lista spółek mają osobne kopie. Możesz wymusić nową kopię lub przywrócić wybraną.
+              Portfel i lista spółek mają osobne kopie. Możesz wymusić nową kopię, eksportować ją lub zaimportować
+              plik z zewnątrz.
             </p>
-            <div className="row" style={{ gap: "1rem", alignItems: "flex-end", flexWrap: "wrap" }}>
-              <div className="field" style={{ flex: "1 1 340px", marginBottom: 0 }}>
+
+            <div className="backup-block">
+              <div className="field backup-select">
                 <label htmlFor="backup-portfolio">Kopie portfela</label>
                 <select
                   id="backup-portfolio"
@@ -1177,32 +1179,31 @@ export default function App() {
                   ))}
                 </select>
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => void onCreatePortfolioBackup()}>
-                Wymuś kopię portfela
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={() => void onExportPortfolioBackup()}>
-                Eksportuj wybraną
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => void onRestorePortfolioBackup()}>
-                Przywróć portfel
-              </button>
-            </div>
-            <div className="row" style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.5rem", flexWrap: "wrap" }}>
-              <input
-                type="file"
-                accept=".db,application/octet-stream"
-                onChange={(e) => setPortfolioImportFile(e.target.files?.[0] ?? null)}
-              />
-              <button type="button" className="btn btn-ghost" onClick={() => void onImportPortfolioBackup()}>
-                Importuj kopię portfela
-              </button>
+              <div className="backup-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => void onCreatePortfolioBackup()}>
+                  Wymuś kopię portfela
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => void onExportPortfolioBackup()}>
+                  Eksportuj wybraną
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => void onRestorePortfolioBackup()}>
+                  Przywróć portfel
+                </button>
+              </div>
+              <div className="backup-import">
+                <input
+                  type="file"
+                  accept=".db,application/octet-stream"
+                  onChange={(e) => setPortfolioImportFile(e.target.files?.[0] ?? null)}
+                />
+                <button type="button" className="btn btn-ghost" onClick={() => void onImportPortfolioBackup()}>
+                  Importuj kopię portfela
+                </button>
+              </div>
             </div>
 
-            <div
-              className="row"
-              style={{ gap: "1rem", alignItems: "flex-end", flexWrap: "wrap", marginTop: "0.75rem" }}
-            >
-              <div className="field" style={{ flex: "1 1 340px", marginBottom: 0 }}>
+            <div className="backup-block">
+              <div className="field backup-select">
                 <label htmlFor="backup-prices">Kopie listy spółek</label>
                 <select
                   id="backup-prices"
@@ -1218,25 +1219,27 @@ export default function App() {
                   ))}
                 </select>
               </div>
-              <button type="button" className="btn btn-ghost" onClick={() => void onCreatePricesBackup()}>
-                Wymuś kopię listy spółek
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={() => void onExportPricesBackup()}>
-                Eksportuj wybraną
-              </button>
-              <button type="button" className="btn btn-primary" onClick={() => void onRestorePricesBackup()}>
-                Przywróć listę spółek
-              </button>
-            </div>
-            <div className="row" style={{ gap: "0.5rem", alignItems: "center", marginTop: "0.5rem", flexWrap: "wrap" }}>
-              <input
-                type="file"
-                accept=".json,application/json"
-                onChange={(e) => setPricesImportFile(e.target.files?.[0] ?? null)}
-              />
-              <button type="button" className="btn btn-ghost" onClick={() => void onImportPricesBackup()}>
-                Importuj kopię listy spółek
-              </button>
+              <div className="backup-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => void onCreatePricesBackup()}>
+                  Wymuś kopię listy spółek
+                </button>
+                <button type="button" className="btn btn-ghost" onClick={() => void onExportPricesBackup()}>
+                  Eksportuj wybraną
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => void onRestorePricesBackup()}>
+                  Przywróć listę spółek
+                </button>
+              </div>
+              <div className="backup-import">
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(e) => setPricesImportFile(e.target.files?.[0] ?? null)}
+                />
+                <button type="button" className="btn btn-ghost" onClick={() => void onImportPricesBackup()}>
+                  Importuj kopię listy spółek
+                </button>
+              </div>
             </div>
           </div>
         </>

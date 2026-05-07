@@ -186,6 +186,41 @@ button.th-sort .sort-ind {
   align-items: flex-end;
 }
 
+.backup-block {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.7rem;
+  margin-top: 0.75rem;
+}
+
+.backup-select {
+  margin-bottom: 0;
+}
+
+.backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.backup-actions .btn {
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.backup-import {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.5rem;
+}
+
+.backup-import input[type="file"] {
+  max-width: 320px;
+}
+
 .badge {
   display: inline-block;
   font-size: 0.7rem;
