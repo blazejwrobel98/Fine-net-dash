@@ -1,6 +1,8 @@
 import json
 import logging
+import shutil
 import sqlite3
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -226,26 +228,49 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
     except FileNotFoundError:
         return False, 0, "Nie znaleziono wskazanej kopii portfela."
 
+    if src_path.resolve() == dbp.resolve():
+        return False, 0, "Nie mozna przywrocic aktywnej bazy sama w sobie (wybierz plik z folderu backups)."
+
     backup_portfolio_now("before_restore")
+
+    from app.database import engine
+
+    engine.dispose(close=True)
+
+    tmp_path = folder / f".restore-work-{uuid.uuid4().hex}.db"
+    conn: sqlite3.Connection | None = None
     copied_rows = 0
-    conn = sqlite3.connect(str(dbp))
     try:
+        shutil.copy2(src_path, tmp_path)
+    except OSError as e:
+        return False, 0, f"Nie mozna przygotowac kopii roboczej z pliku zrodlowego: {e}"
+
+    try:
+        conn = sqlite3.connect(str(dbp), timeout=60.0)
         conn.execute("PRAGMA foreign_keys=OFF")
         conn.execute("BEGIN IMMEDIATE")
-        conn.execute("ATTACH DATABASE ? AS srcdb", (str(src_path),))
-        for table in _PORTFOLIO_TABLES:
-            if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
-                continue
-            conn.execute(f"DELETE FROM {table}")
-            conn.execute(f"INSERT INTO {table} SELECT * FROM srcdb.{table}")
-            row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
-            copied_rows += int(row[0] if row else 0)
-        conn.execute("DETACH DATABASE srcdb")
+        conn.execute("ATTACH DATABASE ? AS srcdb", (str(tmp_path),))
+        try:
+            for table in _PORTFOLIO_TABLES:
+                if not _table_exists(conn, "main", table) or not _table_exists(conn, "srcdb", table):
+                    continue
+                conn.execute(f"DELETE FROM {table}")
+                conn.execute(f"INSERT INTO {table} SELECT * FROM srcdb.{table}")
+                row = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()
+                copied_rows += int(row[0] if row else 0)
+            conn.execute("DETACH DATABASE srcdb")
+        except Exception:
+            try:
+                conn.execute("DETACH DATABASE srcdb")
+            except Exception:
+                pass
+            raise
         conn.commit()
         return True, copied_rows, f"Przywrocono dane portfela z kopii: {file_name}"
     except Exception as e:
         try:
-            conn.rollback()
+            if conn is not None:
+                conn.rollback()
         except Exception:
             pass
         logger.warning("portfolio restore failed: %s", e)
@@ -254,13 +279,21 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
             return (
                 False,
                 0,
-                "Baza SQLite jest zablokowana (zwykle serwer trzyma plik). "
-                "Zatrzymaj zadanie harmonogramu „DividendPortfolio”, poczekaj kilka sekund i sprobuj ponownie — "
-                "albo uzyj skryptu scripts/restore-portfolio-db-file.ps1 (przywracanie przy wylaczonym serwerze).",
+                "Baza SQLite jest zablokowana. Zamknij inne programy uzywajace portfolio.db, "
+                "ew. zatrzymaj zadanie harmonogramu „DividendPortfolio” na chwile i sprobuj ponownie — "
+                "albo uzyj scripts/restore-portfolio-db-file.ps1 (najpewniejsze).",
             )
         return False, 0, f"Blad przy przywracaniu portfela: {e}"
     finally:
-        conn.close()
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _price_row_payload(r: PriceCache) -> dict:

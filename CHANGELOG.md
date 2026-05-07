@@ -7,6 +7,7 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - Przywracanie portfela z kopii (`/api/backups/portfolio/restore`): kopiowane są też **universe_stocks**, **price_cache**, **app_settings**, **alert_cooldowns** (wcześniej tylko loty / sprzedaże / wpłaty / dywidendy / snapshoty — brak „spółek” w cache i ustawień).
 - Przy błędzie blokady SQLite komunikat z sugestią zatrzymania zadania harmonogramu lub użycia skryptu `scripts/restore-portfolio-db-file.ps1`.
 - Nowy skrypt **`scripts/restore-portfolio-db-file.ps1`**: podmiana całego `portfolio.db` z pobranej kopii przy wyłączonym serwerze (najpewniejsze przy „database is locked”).
+- Przywracanie portfela z UI: przed `ATTACH` zwalniany jest **pool SQLAlchemy** (`engine.dispose()`), kopia źródłowa jest **kopiowana do pliku tymczasowego** (unika błędu `database srcdb is locked` na Windows), zwiększony **timeout** połączenia do głównej bazy.
 
 ## [0.3.0] — 2026-05-08
 
