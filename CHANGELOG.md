@@ -4,6 +4,8 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+- **Zależności (zbieżnie z PR Dependabot 5–14):** frontend — Vite **8**, TypeScript **6**, `@vitejs/plugin-react` **5**; backend — `uvicorn` **0.46**, `sqlalchemy` **2.0.49**, `pydantic` **2.12.5**, `pydantic-settings` **2.14**, `python-multipart` **0.0.27**, `requests` **≥2.33.1**; CI / release — `actions/setup-node` **v6**.
+
 ## [0.3.1] — 2026-05-08
 
 - **Kopie i przywracanie portfela:** przywracanie z UI przez **`sqlite3.Connection.backup`** (pełna zawartość pliku kopii), **`scheduler.pause()`** na czas operacji, **ponowienia** przy `database is locked`, zwalnianie poola SQLAlchemy (`engine.dispose()`), kopia źródłowa do pliku tymczasowego (stabilniej na Windows).
