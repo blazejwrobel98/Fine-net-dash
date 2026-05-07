@@ -56,6 +56,7 @@ Copy-Item (Join-Path $RepoRoot "scripts\install-windows.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\uninstall-windows.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Write-StartDashboardBat.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Run-Dashboard.ps1") $OutScripts -Force
+Copy-Item (Join-Path $RepoRoot "scripts\restore-portfolio-db-file.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Install-AfterMsi.ps1") $OutScripts -Force
 Copy-Item (Join-Path $RepoRoot "scripts\Dokoncz-instalacje-msi.bat") $OutScripts -Force
 $legalSrc = Join-Path $RepoRoot "docs\Zastrzezenia-prawne.md"

@@ -36,19 +36,28 @@ if (-not (Test-Path -LiteralPath $venvPy)) {
 }
 
 $env:DASHBOARD_RESTORE_SRC = $BackupDb
-$code = @'
-import os, sqlite3, sys
+$tmpPy = Join-Path $env:TEMP ("dividend-restore-check-" + [Guid]::NewGuid().ToString() + ".py")
+@'
+import os
+import sqlite3
+import sys
+
 p = os.environ.get("DASHBOARD_RESTORE_SRC", "")
-c = sqlite3.connect(p)
-n = c.execute(
+con = sqlite3.connect(p)
+n = con.execute(
     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='purchase_lots'"
 ).fetchone()[0]
-c.close()
+con.close()
 sys.exit(0 if n else 1)
-'@
-& $venvPy -c $code
-$exit = $LASTEXITCODE
-Remove-Item Env:DASHBOARD_RESTORE_SRC -ErrorAction SilentlyContinue
+'@ | Set-Content -LiteralPath $tmpPy -Encoding utf8
+$exit = -1
+try {
+    & $venvPy $tmpPy
+    $exit = $LASTEXITCODE
+} finally {
+    Remove-Item -LiteralPath $tmpPy -Force -ErrorAction SilentlyContinue
+    Remove-Item Env:DASHBOARD_RESTORE_SRC -ErrorAction SilentlyContinue
+}
 if ($exit -ne 0) {
     throw "Plik nie wyglada na baze portfela (brak tabeli purchase_lots): $BackupDb"
 }
@@ -73,6 +82,6 @@ try {
     Start-ScheduledTask -TaskName $TaskName
     Write-Host "Uruchomiono zadanie '$TaskName'. Otworz http://127.0.0.1:8000/"
 } catch {
-    Write-Warning "Nie udalo sie uruchomic zadania: $_ — odpal recznie Start-Dashboard.bat"
+    Write-Warning "Nie udalo sie uruchomic zadania: $_ - odpal recznie Start-Dashboard.bat"
 }
 exit 0
