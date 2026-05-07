@@ -37,7 +37,9 @@ def _yf_session() -> requests.Session:
 
 
 _YF_SESSION = _yf_session()
-_DIVIDEND_RATE_RE = re.compile(r'"dividendRate"\s*:\s*\{"raw"\s*:\s*([0-9]+(?:\.[0-9]+)?)')
+_DIVIDEND_RATE_RE = re.compile(
+    r'(?:\\"|")dividendRate(?:\\"|")\s*:\s*(?:\\"|")?\{(?:\\"|")raw(?:\\"|")\s*:\s*([0-9]+(?:\.[0-9]+)?)'
+)
 
 
 def _yahoo_chart_range(period: str) -> str:
