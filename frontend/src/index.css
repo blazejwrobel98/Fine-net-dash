@@ -663,6 +663,12 @@ button.th-sort .sort-ind {
   align-items: flex-end;
 }
 
+/* Bez tego dolny margin `.field` liczy się przy flex-end i przycisk „siada”
+   wyraźnie niżej niż pole tekstowe w tym samym rzędzie. */
+.row > .field {
+  margin-bottom: 0;
+}
+
 /* Stat grid (wallet summary) */
 
 .stat-grid {
