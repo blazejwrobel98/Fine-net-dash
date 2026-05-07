@@ -34,7 +34,7 @@ RUN mkdir -p /app/backend/data \
 
 WORKDIR /app/backend
 
-ARG APP_VERSION=0.2.2
+ARG APP_VERSION=0.2.3
 ARG GIT_SHA=unknown
 ENV APP_VERSION=$APP_VERSION
 ENV GIT_SHA=$GIT_SHA

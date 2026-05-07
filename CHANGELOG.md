@@ -4,6 +4,8 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+## [0.2.3] — 2026-05-07
+
 - Waluty tickerów Yahoo: poprawione mapowanie `.ST` -> `SEK` (np. `SWED-A.ST` nie jest już oznaczany jako `EUR`).
 - Universe: dodane dwie kolumny dywidendy `%`:
   - **(poprz.)** — względem poprzedniej wypłaconej rocznej dywidendy (historyczna),
