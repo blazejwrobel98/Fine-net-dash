@@ -13,6 +13,10 @@ from app.models import PriceCache
 logger = logging.getLogger(__name__)
 
 _PORTFOLIO_TABLES = [
+    "app_settings",
+    "universe_stocks",
+    "price_cache",
+    "alert_cooldowns",
     "purchase_lots",
     "sale_transactions",
     "cash_deposits",
@@ -245,6 +249,15 @@ def restore_portfolio_from_backup(file_name: str) -> tuple[bool, int, str]:
         except Exception:
             pass
         logger.warning("portfolio restore failed: %s", e)
+        err = str(e)
+        if "locked" in err.lower():
+            return (
+                False,
+                0,
+                "Baza SQLite jest zablokowana (zwykle serwer trzyma plik). "
+                "Zatrzymaj zadanie harmonogramu „DividendPortfolio”, poczekaj kilka sekund i sprobuj ponownie — "
+                "albo uzyj skryptu scripts/restore-portfolio-db-file.ps1 (przywracanie przy wylaczonym serwerze).",
+            )
         return False, 0, f"Blad przy przywracaniu portfela: {e}"
     finally:
         conn.close()

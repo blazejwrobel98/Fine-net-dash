@@ -4,6 +4,10 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+- Przywracanie portfela z kopii (`/api/backups/portfolio/restore`): kopiowane są też **universe_stocks**, **price_cache**, **app_settings**, **alert_cooldowns** (wcześniej tylko loty / sprzedaże / wpłaty / dywidendy / snapshoty — brak „spółek” w cache i ustawień).
+- Przy błędzie blokady SQLite komunikat z sugestią zatrzymania zadania harmonogramu lub użycia skryptu `scripts/restore-portfolio-db-file.ps1`.
+- Nowy skrypt **`scripts/restore-portfolio-db-file.ps1`**: podmiana całego `portfolio.db` z pobranej kopii przy wyłączonym serwerze (najpewniejsze przy „database is locked”).
+
 ## [0.3.0] — 2026-05-08
 
 - **UI:** przebudowa interfejsu (shell 2026): sidebar na desktopie, dolna nawigacja na mobile, typografia Plus Jakarta Sans + JetBrains Mono.
