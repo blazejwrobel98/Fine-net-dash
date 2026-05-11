@@ -1,6 +1,6 @@
 """
-Copy portfolio.db into an install layout when the target is missing or empty (no lots).
-Used by install-windows.ps1 so dev data is not left behind in repo/backend/data.
+Copy portfolio.db into an app tree when the target is missing or empty (no lots).
+Useful for seeding a first install without pulling dev data from repo/backend/data.
 """
 from __future__ import annotations
 

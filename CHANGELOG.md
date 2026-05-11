@@ -7,6 +7,12 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - **CI / release (GitHub Actions):** `actions/checkout` **v6**, `docker/setup-buildx-action` **v4**, `docker/metadata-action` **v6**, `docker/build-push-action` **v7** (zbieżnie z otwartymi PR Dependabot 1–4).
 - **Frontend:** React **19** (`react`, `react-dom`, `@types/react`, `@types/react-dom`; PR 10/13).
 
+## [0.3.3] — 2026-05-09
+
+- **Release:** workflow publikuje wyłącznie obraz Docker (**GHCR**); z CI usunięto ZIP, MSI oraz tarball Linux.
+- **Dokumentacja:** [docs/Docker.md](docs/Docker.md) — `docker compose`, obraz z rejestru, `docker run`, przykładowy `compose` z `image:`, zmienne środowiskowe. Opis każdego release na GitHubie zawiera gotowy wiersz **`ghcr.io/.../fine-net-dash:<tag>`** do wklejenia w konfigurację.
+- **Usunięto:** `packaging/windows` (WiX/MSI) oraz skrypty instalacji Windows/Linux (`build-release`, `install-windows`, MSI, tarball itd.).
+
 ## [0.3.2] — 2026-05-09
 
 - **Zależności (zbieżnie z PR Dependabot 5–14):** frontend — Vite **8**, TypeScript **6**, `@vitejs/plugin-react` **5**; backend — `uvicorn` **0.46**, `sqlalchemy` **2.0.49**, `pydantic` **2.12.5**, `pydantic-settings` **2.14**, `python-multipart` **0.0.27**, `requests` **≥2.33.1**; CI / release — `actions/setup-node` **v6**.

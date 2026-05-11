@@ -36,75 +36,20 @@ jobs:
             GIT_SHA=${{ github.sha }}
             APP_VERSION=${{ github.ref_name }}
 
-  linux-tarball:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-      - name: Build portable tarball
-        run: bash scripts/package-linux-tarball.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-tarball
-          path: release/FineNetDash-linux-amd64.tar.gz
-
-  windows-assets:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "22"
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Build release ZIP
-        shell: pwsh
-        run: .\scripts\build-release.ps1 -Zip
-      # Pin WiX 6.x: WiX 7+ requires OSMF EULA (-acceptEula wix7) or sponsorship.
-      - name: Install WiX
-        run: dotnet tool install --global wix --version 6.0.2
-      - name: Add WiX to PATH
-        shell: pwsh
-        run: |
-          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
-      - name: MSI version (four parts)
-        id: msi_ver
-        shell: pwsh
-        run: |
-          $t = "${{ github.ref_name }}".TrimStart('v')
-          $p = @($t -split '\.')
-          while ($p.Count -lt 4) { $p += '0' }
-          $msi = ($p[0..3] -join '.')
-          Add-Content -Path $env:GITHUB_OUTPUT -Encoding utf8 -Value "msi_version=$msi"
-      - name: Build MSI
-        shell: pwsh
-        run: .\packaging\windows\build-msi.ps1 -Version ${{ steps.msi_ver.outputs.msi_version }} -SkipReleaseBuild
-      - uses: actions/upload-artifact@v4
-        with:
-          name: windows-assets
-          path: |
-            release/DividendPortfolio.zip
-            release/FineNetDash.msi
-
   publish-github-release:
-    needs: [linux-tarball, windows-assets]
+    needs: [docker]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: linux-tarball
-          path: artifacts/linux
-      - uses: actions/download-artifact@v4
-        with:
-          name: windows-assets
-          path: artifacts/windows
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: |
-            artifacts/linux/FineNetDash-linux-amd64.tar.gz
-            artifacts/windows/DividendPortfolio.zip
-            artifacts/windows/FineNetDash.msi
+          body: |
+            ## Obraz Docker (GHCR)
+
+            Wklej w pole **image** w Compose, Portainerze, Kubernetes itd.:
+
+            **`ghcr.io/blazejwrobel98/fine-net-dash:${{ github.ref_name }}`**
+
+            Ten sam identyfikator co tag wydania (np. `v0.3.3`). Działa też **`ghcr.io/blazejwrobel98/fine-net-dash:latest`** (ostatni tag `v*` z tego workflow).
+
+            Instrukcje uruchomienia: [docs/Docker.md](https://github.com/blazejwrobel98/Fine-net-dash/blob/${{ github.ref_name }}/docs/Docker.md).

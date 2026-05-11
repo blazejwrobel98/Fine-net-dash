@@ -81,27 +81,29 @@ Dashboard: `http://127.0.0.1:8000/`.
 
 ---
 
-## Docker
+## Docker (zalecane do uruchomienia „u siebie”)
+
+Pełna instrukcja: **[docs/Docker.md](docs/Docker.md)** — `docker compose` z kodu, **gotowy obraz GHCR**, przykładowe `docker run` / fragment `compose` tylko z `image:`, zmienne środowiskowe i healthcheck.
+
+Skrót z repozytorium (build lokalny):
 
 ```bash
 docker compose up --build
 ```
 
-Obraz działa jako **użytkownik nieuprzywilejowany** (`app`). Wolumen: dane SQLite w `/app/backend/data`.
+Aplikacja: **http://127.0.0.1:8000/**. Obraz działa jako użytkownik nieuprzywilejowany (`app`); dane SQLite są w wolumenie (`/app/backend/data` w kontenerze).
 
 ---
 
-## Paczki stabilne (GitHub Releases)
+## Wydania (GitHub Releases + GHCR)
 
-Po wypchnięciu tagu `v*` (np. `v0.2.0`) CI buduje m.in.:
+Po wypchnięciu tagu **`v*`** (np. `v0.3.3`) CI publikuje obraz i stronę wydania.
 
-| Artefakt      | Opis |
-| ------------- | ---- |
-| Obraz Docker  | `ghcr.io/blazejwrobel98/fine-net-dash:<tag>` |
-| Linux `.tar.gz` | Paczka przenośna + `scripts/install-linux.sh` |
-| Windows       | ZIP (`install-windows.ps1`) oraz MSI (per-user); po MSI **jednorazowo** uruchom `scripts\Dokoncz-instalacje-msi.bat` lub `Install-AfterMsi.ps1`. |
+| Dostawa | Opis |
+| ------- | ----- |
+| **Obraz kontenera** | `ghcr.io/blazejwrobel98/fine-net-dash:<tag>` — `<tag>` taki sam jak tag na GitHubie (np. `v0.3.3`); dodatkowo tag **`latest`**. |
 
-**MSI lokalnie:** [WiX](https://wixtoolset.org/) w wersji **6.x** (np. `dotnet tool install --global wix --version 6.0.2`), potem `.\packaging\windows\build-msi.ps1 -Version 0.2.0.0`.
+W opisie każdego release na GitHubie jest **gotowy wiersz `image:`** do skopiowania. Szczegóły uruchomienia: [docs/Docker.md](docs/Docker.md).
 
 ---
 

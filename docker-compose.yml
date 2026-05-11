@@ -1,4 +1,5 @@
-# Lokalne uruchomienie. Nie wystawiaj portu publicznie bez reverse proxy i zabezpieczeń.
+# Lokalne uruchomienie z Dockerfile w repo. Nie wystawiaj portu publicznie bez reverse proxy i zabezpieczeń.
+# Gotowy obraz z rejestru — patrz docs/Docker.md (ghcr.io/blazejwrobel98/fine-net-dash:<tag>).
 services:
   web:
     build: .
