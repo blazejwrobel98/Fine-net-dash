@@ -74,7 +74,7 @@ Pełna lista: `backend/.env.example`.
 
 ## Bezpieczeństwo
 
-API **nie ma logowania** — nie wystawiaj portu publicznie bez reverse proxy, firewalla lub VPN. Zobacz też [README — bezpieczeństwo](../README.md#bezpieczeństwo-ważne).
+API **nie ma logowania** — nie wystawiaj portu publicznie bez reverse proxy, firewalla lub VPN. Zobacz też [README — sekcja „Bezpieczeństwo”](../README.md).
 
 ## Healthcheck
 
