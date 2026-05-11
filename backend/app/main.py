@@ -35,6 +35,7 @@ from app.schemas import (
     PurchaseLotCreate,
     PurchaseLotOut,
     RefreshPricesResult,
+    UpdateCheckOut,
     SaleTransactionOut,
     SettingsOut,
     SettingsUpdate,
@@ -272,6 +273,14 @@ def api_version():
 
     sha = git_sha()
     return {"version": app_version(), "git_sha": sha if sha else None}
+
+
+@app.get("/api/version/update", response_model=UpdateCheckOut)
+def api_version_update():
+    from app.version_info import app_version, check_update_available
+
+    data = check_update_available(app_version())
+    return UpdateCheckOut.model_validate(data)
 
 
 @app.get("/api/universe", response_model=UniverseListResponse)

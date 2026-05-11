@@ -208,9 +208,19 @@ export type BuildVersion = {
   git_sha: string | null;
 };
 
+export type BuildUpdate = {
+  current_version: string;
+  latest_version: string | null;
+  update_available: boolean;
+  release_url: string | null;
+  checked_at_utc: string;
+  error: string | null;
+};
+
 export const api = {
   health: () => fetch(`${base}/api/health`).then((r) => j<{ ok: boolean }>(r)),
   version: () => fetch(`${base}/api/version`).then((r) => j<BuildVersion>(r)),
+  versionUpdate: () => fetch(`${base}/api/version/update`).then((r) => j<BuildUpdate>(r)),
   universe: (region?: string, minDividendYieldPct?: number, requireDividendYield?: boolean) => {
     const params = new URLSearchParams();
     if (region) params.set("region", region);

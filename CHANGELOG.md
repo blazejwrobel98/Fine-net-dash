@@ -7,6 +7,12 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 - **CI / release (GitHub Actions):** `actions/checkout` **v6**, `docker/setup-buildx-action` **v4**, `docker/metadata-action` **v6**, `docker/build-push-action` **v7** (zbieżnie z otwartymi PR Dependabot 1–4).
 - **Frontend:** React **19** (`react`, `react-dom`, `@types/react`, `@types/react-dom`; PR 10/13).
 
+## [0.3.4] — 2026-05-11
+
+- **Backend:** **`GET /api/version/update`** + schema **`UpdateCheckOut`** — informacja o nowszej wersji z GitHub Releases przez serwer (cache i obsługa błędów w `version_info.check_update_available`).
+- **Frontend:** **favicon** (`public/favicon.svg`, link w `index.html`).
+- **Frontend:** **zwijany panel boczny** na desktopie (tryb samych ikon), przycisk przy logo, stan w **`localStorage`** (`sidebarNavCollapsed`).
+
 ## [0.3.3] — 2026-05-09
 
 - **Release:** workflow publikuje wyłącznie obraz Docker (**GHCR**); z CI usunięto ZIP, MSI oraz tarball Linux.

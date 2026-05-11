@@ -146,6 +146,15 @@ class RefreshPricesResult(BaseModel):
     failed: list[str]
 
 
+class UpdateCheckOut(BaseModel):
+    current_version: str
+    latest_version: str | None = None
+    update_available: bool
+    release_url: str | None = None
+    checked_at_utc: str
+    error: str | None = None
+
+
 class BackupFileOut(BaseModel):
     file_name: str
     size_bytes: int

@@ -4,6 +4,8 @@ import {
   LayoutDashboard,
   LineChart as LineChartIcon,
   Moon,
+  PanelLeft,
+  PanelLeftClose,
   Settings as SettingsIcon,
   Sun,
   Wallet,
@@ -13,6 +15,7 @@ import {
   api,
   type AppSettings,
   type BackupFile,
+  type BuildUpdate,
   type Position,
   type PurchaseLot,
   type SaleTransaction,
@@ -40,6 +43,11 @@ function readInitialTheme(): ThemeMode {
   const saved = window.localStorage.getItem("theme");
   if (saved === "light" || saved === "dark") return saved;
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
+
+function readSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("sidebarNavCollapsed") === "1";
 }
 
 function tabPageMeta(tab: Tab): { eyebrow: string; title: string; description: string } {
@@ -264,7 +272,9 @@ export default function App() {
   const [portfolioImportFile, setPortfolioImportFile] = useState<File | null>(null);
   const [pricesImportFile, setPricesImportFile] = useState<File | null>(null);
   const [serverBuild, setServerBuild] = useState<string | null>(null);
+  const [buildUpdate, setBuildUpdate] = useState<BuildUpdate | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => readInitialTheme());
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => readSidebarCollapsed());
   const [toastErrDismissed, setToastErrDismissed] = useState(false);
   const [toastOkDismissed, setToastOkDismissed] = useState(false);
 
@@ -278,6 +288,14 @@ export default function App() {
       /* ignore */
     }
   }, [theme]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("sidebarNavCollapsed", sidebarCollapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     setToastErrDismissed(false);
@@ -311,6 +329,7 @@ export default function App() {
         setServerBuild(sha ? `${v.version} · ${sha}` : v.version);
       })
       .catch(() => setServerBuild("nieznana (brak /api/version)"));
+    void api.versionUpdate().then(setBuildUpdate).catch(() => setBuildUpdate(null));
   }, []);
 
   useEffect(() => {
@@ -644,11 +663,27 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell${sidebarCollapsed ? " app-shell--nav-collapsed" : ""}`}>
       <aside className="app-sidebar" aria-label="Nawigacja główna">
         <div className="app-sidebar__brand">
-          <div className="app-sidebar__logo" aria-hidden>
-            PD
+          <div className="app-sidebar__brand-top">
+            <div className="app-sidebar__logo" aria-hidden>
+              PD
+            </div>
+            <button
+              type="button"
+              className="sidebar-collapse-btn"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              aria-pressed={sidebarCollapsed}
+              aria-label={sidebarCollapsed ? "Rozwiń panel boczny" : "Zwiń panel boczny (same ikony)"}
+              title={sidebarCollapsed ? "Rozwiń panel" : "Zwiń panel — same ikony"}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeft size={18} strokeWidth={2} aria-hidden />
+              ) : (
+                <PanelLeftClose size={18} strokeWidth={2} aria-hidden />
+              )}
+            </button>
           </div>
           <div className="app-sidebar__titles">
             <h1>Portfel dywidendowy</h1>
@@ -662,24 +697,46 @@ export default function App() {
               type="button"
               className={`app-nav__btn${tab === id ? " is-active" : ""}`}
               onClick={() => setTab(id)}
+              title={label}
+              aria-label={label}
             >
               <Icon size={20} strokeWidth={2} aria-hidden />
-              <span className="nav-label-full">{label}</span>
-              <span className="nav-label-mobile">{short}</span>
+              <span className="nav-label-full" aria-hidden="true">
+                {label}
+              </span>
+              <span className="nav-label-mobile" aria-hidden="true">
+                {short}
+              </span>
             </button>
           ))}
         </nav>
         <div className="app-sidebar__footer">
-          <div className="app-build-pill" role="status">
+          {buildUpdate?.update_available ? (
+            <a
+              className="app-update-pill"
+              href={buildUpdate.release_url ?? "#"}
+              target={buildUpdate.release_url ? "_blank" : undefined}
+              rel={buildUpdate.release_url ? "noreferrer" : undefined}
+              title={`Dostępna aktualizacja: ${buildUpdate.latest_version ?? "nowsza wersja"}`}
+              aria-label={`Dostępna aktualizacja: ${buildUpdate.latest_version ?? "nowsza wersja"}`}
+            >
+              <span className="app-update-pill__text">Dostępna aktualizacja: {buildUpdate.latest_version ?? "nowsza wersja"}</span>
+            </a>
+          ) : null}
+          <div className="app-build-pill" role="status" title={serverBuild ?? undefined}>
             <strong>Build</strong> {serverBuild ?? "…"}
           </div>
           <button
             type="button"
             className="theme-toggle"
             onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            aria-label={theme === "dark" ? "Włącz tryb jasny" : "Włącz tryb ciemny"}
+            title={theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
           >
             {theme === "dark" ? <Sun size={16} strokeWidth={2} aria-hidden /> : <Moon size={16} strokeWidth={2} aria-hidden />}
-            {theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
+            <span className="theme-toggle__label" aria-hidden="true">
+              {theme === "dark" ? "Tryb jasny" : "Tryb ciemny"}
+            </span>
           </button>
         </div>
       </aside>

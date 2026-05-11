@@ -8,7 +8,7 @@ from threading import Lock
 import httpx
 
 # Domyślnie przy lokalnym uruchomieniu bez zmiennych środowiskowych.
-_DEFAULT_VERSION = "0.3.3"
+_DEFAULT_VERSION = "0.3.4"
 _RELEASES_URL = "https://api.github.com/repos/blazejwrobel98/Fine-net-dash/releases/latest"
 _VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
 _CHECK_TTL = timedelta(minutes=30)
