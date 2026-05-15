@@ -220,7 +220,10 @@ export type BuildUpdate = {
 export const api = {
   health: () => fetch(`${base}/api/health`).then((r) => j<{ ok: boolean }>(r)),
   version: () => fetch(`${base}/api/version`).then((r) => j<BuildVersion>(r)),
-  versionUpdate: () => fetch(`${base}/api/version/update`).then((r) => j<BuildUpdate>(r)),
+  versionUpdate: (opts?: { refresh?: boolean }) => {
+    const q = opts?.refresh ? "?refresh=1" : "";
+    return fetch(`${base}/api/version/update${q}`).then((r) => j<BuildUpdate>(r));
+  },
   universe: (region?: string, minDividendYieldPct?: number, requireDividendYield?: boolean) => {
     const params = new URLSearchParams();
     if (region) params.set("region", region);
@@ -349,6 +352,8 @@ export type TimelinePayload = {
     total_equity_pln: number;
     holdings_pln: number;
     cash_pln: number;
+    /** Skumulowane wpłaty na konto (bez dywidend) na datę punktu. */
+    deposits_cumulative_pln: number;
   }[];
   dividends: { date: string; amount_pln: number; ticker: string; note: string | null }[];
 };

@@ -276,10 +276,20 @@ def api_version():
 
 
 @app.get("/api/version/update", response_model=UpdateCheckOut)
-def api_version_update():
-    from app.version_info import app_version, check_update_available
+def api_version_update(refresh: bool = Query(False, description="Wymuś ponowne pobranie tagu z GitHub (ignoruj cache).")):
+    from app.version_info import app_version, check_update_available, clear_github_release_cache
 
+    if refresh:
+        clear_github_release_cache()
     data = check_update_available(app_version())
+    logger.info(
+        "GET /api/version/update refresh=%s current=%s latest=%s update_available=%s err=%s",
+        refresh,
+        data.get("current_version"),
+        data.get("latest_version"),
+        data.get("update_available"),
+        data.get("error"),
+    )
     return UpdateCheckOut.model_validate(data)
 
 

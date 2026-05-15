@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     )
 
     database_url: str = _DEFAULT_DB
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = (
+        "http://localhost:5173,http://127.0.0.1:5173,"
+        "http://localhost:5174,http://127.0.0.1:5174,"
+        "http://[::1]:5173,http://[::1]:5174"
+    )
     # Pauza między tickerami przy odświeżaniu (Yahoo 429 przy zbyt wielu zapytaniach)
     yahoo_request_delay_seconds: float = 0.55
     # Kopie portfela po każdej zmianie — ile ostatnich pełnych wersji trzymać (niskie = szybkie usuwanie starych kopii z „większą” liczbą lotów).

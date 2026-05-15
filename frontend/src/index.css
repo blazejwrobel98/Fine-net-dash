@@ -252,6 +252,13 @@ button {
   gap: 0.5rem;
 }
 
+.app-sidebar__version-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+}
+
 .app-build-pill {
   font-size: 0.72rem;
   color: var(--text-secondary);
@@ -262,20 +269,57 @@ button {
   line-height: 1.35;
 }
 
-.app-update-pill {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--warning);
-  text-decoration: none;
+.app-update-notice {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
   padding: 0.45rem 0.6rem;
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--warning) 16%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--border));
   line-height: 1.35;
+  font-size: 0.72rem;
+  background: #e8f4fc;
+  color: #0f172a;
+  border: 1px solid #bae6fd;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
-.app-update-pill:hover {
-  filter: brightness(1.03);
+[data-theme="light"] .app-update-notice {
+  background: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0c4a6e;
+}
+
+.app-update-notice__eyebrow {
+  display: block;
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0369a1;
+}
+
+.app-update-notice__version {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+[data-theme="light"] .app-update-notice__version {
+  color: #0c4a6e;
+}
+
+.app-update-notice--topbar {
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.app-build-pill--topbar {
+  font-size: 0.68rem;
+  padding: 0.35rem 0.45rem;
+  text-align: center;
 }
 
 .app-build-pill strong {
@@ -338,6 +382,21 @@ button {
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: -0.02em;
+}
+
+.app-topbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.app-topbar__version {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 100%;
 }
 
 /* Banner */
@@ -1013,6 +1072,15 @@ button.th-sort .sort-ind {
 
   .app-topbar {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+    min-height: auto;
+    padding: 0.45rem 0.75rem 0.5rem;
+  }
+
+  .app-topbar__row {
+    min-height: 2.35rem;
   }
 
   .page-header {
@@ -1079,7 +1147,7 @@ button.th-sort .sort-ind {
     width: 100%;
   }
 
-  .app-shell--nav-collapsed .app-update-pill {
+  .app-shell--nav-collapsed .app-update-notice {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1087,11 +1155,11 @@ button.th-sort .sort-ind {
     padding: 0.35rem;
   }
 
-  .app-shell--nav-collapsed .app-update-pill__text {
+  .app-shell--nav-collapsed .app-update-notice__text {
     display: none;
   }
 
-  .app-shell--nav-collapsed .app-update-pill::after {
+  .app-shell--nav-collapsed .app-update-notice::after {
     content: "⬆";
     font-size: 1.05rem;
     line-height: 1;

@@ -83,6 +83,32 @@ export default function ChartsPanel({ colorScheme = "dark" }: { colorScheme?: Ch
         }
       : null;
 
+  const depositsVsEquityData =
+    tl && tl.equity_series.length > 0
+      ? {
+          labels: tl.equity_series.map((x) =>
+            new Date(x.date).toLocaleDateString("pl-PL", { day: "2-digit", month: "short" })
+          ),
+          datasets: [
+            {
+              label: "Suma wpłat (PLN)",
+              data: tl.equity_series.map((x) => x.deposits_cumulative_pln),
+              borderColor: pal.mutedLine,
+              backgroundColor: "transparent",
+              tension: 0.2,
+            },
+            {
+              label: "Wartość portfela (PLN)",
+              data: tl.equity_series.map((x) => x.total_equity_pln),
+              borderColor: pal.accent,
+              backgroundColor: pal.accentFill,
+              fill: true,
+              tension: 0.25,
+            },
+          ],
+        }
+      : null;
+
   const divBar =
     tl && tl.dividends.length > 0
       ? {
@@ -147,6 +173,34 @@ export default function ChartsPanel({ colorScheme = "dark" }: { colorScheme?: Ch
           </div>
         ) : (
           <p className="muted">Brak zapisanych snapshotów — odśwież ceny na pozycjach (przycisk „Odśwież ceny”).</p>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>Wpłaty vs wartość portfela</h3>
+        <p className="muted" style={{ marginTop: 0 }}>
+          „Suma wpłat” to skumulowane wpłaty na konto (zakładka Portfel) — bez dywidend. „Wartość portfela” to
+          papiery + gotówka (jak na wykresie powyżej). Ostatni punkt jest zawsze aktualny.
+        </p>
+        {depositsVsEquityData ? (
+          <div className="chart-box">
+            <Line
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { labels: { color: pal.legend, ...chartFont } },
+                },
+                scales: {
+                  x: { ticks: { color: pal.tick, ...chartFont }, grid: { color: pal.grid } },
+                  y: { ticks: { color: pal.tick, ...chartFont }, grid: { color: pal.grid } },
+                },
+              }}
+              data={depositsVsEquityData}
+            />
+          </div>
+        ) : (
+          <p className="muted">Brak danych — dodaj wpłaty lub odśwież ceny, żeby powstały snapshoty.</p>
         )}
       </div>
 

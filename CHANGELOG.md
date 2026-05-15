@@ -4,8 +4,11 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
-- **CI / release (GitHub Actions):** `actions/checkout` **v6**, `docker/setup-buildx-action` **v4**, `docker/metadata-action` **v6**, `docker/build-push-action` **v7** (zbieżnie z otwartymi PR Dependabot 1–4).
-- **Frontend:** React **19** (`react`, `react-dom`, `@types/react`, `@types/react-dom`; PR 10/13).
+## [0.3.5] — 2026-05-15
+
+- **Wykresy:** wykres **wpłaty vs wartość portfela** — skumulowane wpłaty na konto (bez dywidend) obok wartości całkowitej; pole `deposits_cumulative_pln` w `/api/charts/timeline`.
+- **Backend:** sprawdzanie aktualizacji — osobny cache odpowiedzi GitHub, `?refresh=1` na `/api/version/update`, krótszy TTL; domyślne **CORS** obejmuje porty **5174** i **IPv6 localhost** (`[::1]`).
+- **Frontend:** baner aktualizacji i diagnostyka startu (timeout ładowania, `__FND_DEBUG__` w dev, pasek stanu bootu); pierwsze sprawdzenie wersji z odświeżeniem cache.
 
 ## [0.3.4] — 2026-05-11
 

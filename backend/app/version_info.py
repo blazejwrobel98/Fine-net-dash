@@ -8,12 +8,21 @@ from threading import Lock
 import httpx
 
 # Domyślnie przy lokalnym uruchomieniu bez zmiennych środowiskowych.
-_DEFAULT_VERSION = "0.3.4"
+_DEFAULT_VERSION = "0.3.5"
 _RELEASES_URL = "https://api.github.com/repos/blazejwrobel98/Fine-net-dash/releases/latest"
-_VERSION_RE = re.compile(r"^v?(\d+)\.(\d+)\.(\d+)$")
-_CHECK_TTL = timedelta(minutes=30)
+# Tag z GitHub bywa `v0.3.4`; APP_VERSION z CI też — akceptujemy `v` / `V` na początku.
+_VERSION_RE = re.compile(r"^[vV]?(\d+)\.(\d+)\.(\d+)$")
+# Cache tylko odpowiedzi GitHub (tag + URL). update_available liczymy przy każdym żądaniu —
+# inaczej po wydaniu nowego tagu przez ~30 min zwracalibyśmy stare „brak aktualizacji”.
+_GITHUB_TTL = timedelta(minutes=5)
+_GITHUB_ERR_TTL = timedelta(seconds=90)
 _CHECK_LOCK = Lock()
-_CHECK_CACHE: dict[str, object] = {"at": None, "data": None}
+_GITHUB_RELEASE_CACHE: dict[str, object | None] = {
+    "at": None,
+    "tag_name": None,
+    "html_url": None,
+    "error": None,
+}
 
 
 def app_version() -> str:
@@ -23,6 +32,15 @@ def app_version() -> str:
 
 def git_sha() -> str:
     return (os.getenv("GIT_SHA") or "").strip()
+
+
+def clear_github_release_cache() -> None:
+    """Wyzeruj cache odpowiedzi GitHub (np. ?refresh=1 na /api/version/update)."""
+    with _CHECK_LOCK:
+        _GITHUB_RELEASE_CACHE["at"] = None
+        _GITHUB_RELEASE_CACHE["tag_name"] = None
+        _GITHUB_RELEASE_CACHE["html_url"] = None
+        _GITHUB_RELEASE_CACHE["error"] = None
 
 
 def _parse_version(raw: str | None) -> tuple[int, int, int] | None:
@@ -39,12 +57,6 @@ def check_update_available(current: str | None = None) -> dict[str, object]:
     Zwraca bezpieczny payload także przy błędach sieciowych.
     """
     now = datetime.now(timezone.utc)
-    with _CHECK_LOCK:
-        cached_at = _CHECK_CACHE.get("at")
-        cached_data = _CHECK_CACHE.get("data")
-        if isinstance(cached_at, datetime) and now - cached_at < _CHECK_TTL and isinstance(cached_data, dict):
-            return dict(cached_data)
-
     cur = (current or app_version()).strip()
     cur_tuple = _parse_version(cur)
     out: dict[str, object] = {
@@ -56,21 +68,58 @@ def check_update_available(current: str | None = None) -> dict[str, object]:
         "error": None,
     }
 
-    try:
-        with httpx.Client(timeout=4.0, follow_redirects=True) as client:
-            r = client.get(_RELEASES_URL, headers={"Accept": "application/vnd.github+json"})
-            r.raise_for_status()
-            data = r.json()
-        latest_raw = str(data.get("tag_name") or "").strip()
-        latest = latest_raw[1:] if latest_raw.startswith("v") else latest_raw
-        latest_tuple = _parse_version(latest)
-        out["latest_version"] = latest or None
-        out["release_url"] = str(data.get("html_url") or "") or None
-        out["update_available"] = bool(cur_tuple and latest_tuple and latest_tuple > cur_tuple)
-    except Exception as e:
-        out["error"] = str(e)
+    tag_raw: str | None = None
+    html_url: str | None = None
 
     with _CHECK_LOCK:
-        _CHECK_CACHE["at"] = now
-        _CHECK_CACHE["data"] = dict(out)
-    return out
+        gh_at = _GITHUB_RELEASE_CACHE.get("at")
+        gh_err = _GITHUB_RELEASE_CACHE.get("error")
+        if isinstance(gh_at, datetime):
+            age = now - gh_at
+            ttl = _GITHUB_ERR_TTL if gh_err else _GITHUB_TTL
+            if age < ttl:
+                if gh_err:
+                    out["error"] = str(gh_err)
+                    return dict(out)
+                tr = _GITHUB_RELEASE_CACHE.get("tag_name")
+                if isinstance(tr, str) and tr.strip():
+                    tag_raw = tr.strip()
+                    hu = _GITHUB_RELEASE_CACHE.get("html_url")
+                    html_url = (str(hu).strip() if hu else None) or None
+
+        if tag_raw is None:
+            try:
+                with httpx.Client(timeout=4.0, follow_redirects=True) as client:
+                    r = client.get(_RELEASES_URL, headers={"Accept": "application/vnd.github+json"})
+                    r.raise_for_status()
+                    data = r.json()
+                tr = str(data.get("tag_name") or "").strip() or None
+                hu = str(data.get("html_url") or "").strip() or None
+                _GITHUB_RELEASE_CACHE["at"] = now
+                _GITHUB_RELEASE_CACHE["tag_name"] = tr
+                _GITHUB_RELEASE_CACHE["html_url"] = hu if hu else None
+                _GITHUB_RELEASE_CACHE["error"] = None
+                tag_raw = tr
+                html_url = hu if hu else None
+            except Exception as e:
+                _GITHUB_RELEASE_CACHE["at"] = now
+                _GITHUB_RELEASE_CACHE["tag_name"] = None
+                _GITHUB_RELEASE_CACHE["html_url"] = None
+                _GITHUB_RELEASE_CACHE["error"] = str(e)
+                out["error"] = str(e)
+                return dict(out)
+
+    if not tag_raw:
+        out["error"] = "GitHub: brak tag_name w odpowiedzi."
+        return dict(out)
+
+    latest_tuple = _parse_version(tag_raw)
+    latest = (
+        tag_raw[1:].strip()
+        if len(tag_raw) > 1 and tag_raw[0] in "vV" and tag_raw[1].isdigit()
+        else tag_raw
+    )
+    out["latest_version"] = latest or None
+    out["release_url"] = html_url or None
+    out["update_available"] = bool(cur_tuple and latest_tuple and latest_tuple > cur_tuple)
+    return dict(out)

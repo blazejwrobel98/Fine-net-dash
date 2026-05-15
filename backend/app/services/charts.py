@@ -3,18 +3,48 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import DividendReceipt, PortfolioSnapshot
+from app.models import CashDeposit, DividendReceipt, PortfolioSnapshot
 from app.services.portfolio import lots_by_ticker
 from app.services.prices import get_cached_map
 from app.services.wallet import get_fx_rates, price_to_pln_per_share, wallet_summary_dict
 
 
-def _equity_point_from_summary(summ: dict, at: datetime) -> dict:
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _deposit_cumulative_events(deposits: list[CashDeposit]) -> list[tuple[datetime, float]]:
+    """Skumulowane wpłaty (CashDeposit) — dywidendy nie wchodzą."""
+    events: list[tuple[datetime, float]] = []
+    cum = 0.0
+    for d in sorted(deposits, key=lambda x: _as_utc(x.received_at)):
+        cum += float(d.amount_pln)
+        events.append((_as_utc(d.received_at), round(cum, 2)))
+    return events
+
+
+def _cumulative_deposits_at(events: list[tuple[datetime, float]], at: datetime) -> float:
+    at_utc = _as_utc(at)
+    val = 0.0
+    for dt, cum in events:
+        if dt <= at_utc:
+            val = cum
+        else:
+            break
+    return val
+
+
+def _equity_point_from_summary(
+    summ: dict, at: datetime, *, deposits_cumulative_pln: float
+) -> dict:
     return {
         "date": at.isoformat(),
         "total_equity_pln": round(summ["total_equity_pln"], 2),
         "holdings_pln": round(summ["holdings_market_pln"], 2),
         "cash_pln": round(summ["cash_available_pln"], 2),
+        "deposits_cumulative_pln": round(deposits_cumulative_pln, 2),
     }
 
 
@@ -25,27 +55,37 @@ def timeline_payload(db: Session) -> dict:
     divs = db.execute(
         select(DividendReceipt).order_by(DividendReceipt.received_at)
     ).scalars().all()
+    deposits = db.execute(select(CashDeposit).order_by(CashDeposit.received_at)).scalars().all()
+    deposit_events = _deposit_cumulative_events(deposits)
 
     equity_series: list[dict] = [
-        {
-            "date": s.recorded_at.isoformat(),
-            "total_equity_pln": round(s.total_equity_pln, 2),
-            "holdings_pln": round(s.holdings_value_pln, 2),
-            "cash_pln": round(s.cash_pln, 2),
-        }
+        _equity_point_from_summary(
+            {
+                "total_equity_pln": s.total_equity_pln,
+                "holdings_market_pln": s.holdings_value_pln,
+                "cash_available_pln": s.cash_pln,
+            },
+            s.recorded_at,
+            deposits_cumulative_pln=_cumulative_deposits_at(deposit_events, s.recorded_at),
+        )
         for s in snaps
     ]
     live = wallet_summary_dict(db)
     now = datetime.now(timezone.utc)
+    live_deposits = _cumulative_deposits_at(deposit_events, now)
     if not equity_series:
-        equity_series.append(_equity_point_from_summary(live, now))
+        equity_series.append(_equity_point_from_summary(live, now, deposits_cumulative_pln=live_deposits))
     else:
         last_snap = snaps[-1]
         last_day = last_snap.recorded_at.date()
         if last_day == now.date():
-            equity_series[-1] = _equity_point_from_summary(live, now)
+            equity_series[-1] = _equity_point_from_summary(
+                live, now, deposits_cumulative_pln=live_deposits
+            )
         else:
-            equity_series.append(_equity_point_from_summary(live, now))
+            equity_series.append(
+                _equity_point_from_summary(live, now, deposits_cumulative_pln=live_deposits)
+            )
 
     return {
         "equity_series": equity_series,

@@ -257,6 +257,8 @@ export default function App() {
   const [regionFilter, setRegionFilter] = useState<string>("");
   const [minDividendPct, setMinDividendPct] = useState<string>("5");
   const [loading, setLoading] = useState(true);
+  /** Tekst pod spinnerem — widać, na którym etapie jest start (dev + zwykły). */
+  const [bootStatus, setBootStatus] = useState("Start…");
   const [err, setErr] = useState<string | null>(null);
   const [refreshMsg, setRefreshMsg] = useState<string | null>(null);
 
@@ -329,24 +331,91 @@ export default function App() {
         setServerBuild(sha ? `${v.version} · ${sha}` : v.version);
       })
       .catch(() => setServerBuild("nieznana (brak /api/version)"));
-    void api.versionUpdate().then(setBuildUpdate).catch(() => setBuildUpdate(null));
+    let refreshGitHub = false;
+    try {
+      refreshGitHub = !sessionStorage.getItem("fnd-version-check-bust-v2");
+      if (refreshGitHub) {
+        sessionStorage.setItem("fnd-version-check-bust-v2", "1");
+      }
+    } catch {
+      refreshGitHub = true;
+    }
+    const vLog = "[FineNetDash] sprawdzanie wersji / aktualizacji";
+    console.log(`${vLog}: żądanie`, { refreshGitHub, url: `/api/version/update${refreshGitHub ? "?refresh=1" : ""}` });
+    void api
+      .versionUpdate({ refresh: refreshGitHub })
+      .then((bu) => {
+        console.log(`${vLog}: odpowiedź`, {
+          current_version: bu.current_version,
+          latest_version: bu.latest_version,
+          update_available: bu.update_available,
+          error: bu.error,
+          checked_at_utc: bu.checked_at_utc,
+        });
+        setBuildUpdate(bu);
+      })
+      .catch((e) => {
+        console.warn(`${vLog}: błąd (UI ukryje komunikat o update)`, e);
+        setBuildUpdate(null);
+      });
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    api
+    setBootStatus("Wywołuję /api/health…");
+    const bootTimeoutMs = 90_000;
+    let tid: ReturnType<typeof setTimeout> | undefined;
+    const bootTimeout = new Promise<never>((_, reject) => {
+      tid = setTimeout(
+        () =>
+          reject(
+            new Error(
+              `Przekroczono ${bootTimeoutMs / 1000} s oczekiwania na dane z API (np. /api/universe). ` +
+                "Sprawdź, czy backend na porcie 8000 działa i czy nie ma zablokowanego wyjścia do sieci (Yahoo).",
+            ),
+          ),
+        bootTimeoutMs,
+      );
+    });
+    void api
       .health()
-      .then(() => loadCore())
+      .then(() => {
+        setBootStatus("Health OK — pobieram universe, pozycje, loty, ustawienia (może chwilę potrwać)…");
+        const core = loadCore();
+        void core.catch(() => {});
+        return Promise.race([core, bootTimeout]);
+      })
       .catch((e: unknown) => {
         const msg = e instanceof Error ? e.message : String(e);
+        setBootStatus(`Błąd startu: ${msg.slice(0, 200)}`);
         setErr(
           msg.includes("Failed to fetch") || msg.includes("NetworkError")
             ? "Brak połączenia z serwerem (sprawdź, czy backend działa i czy adres w przeglądarce jest poprawny)."
             : msg,
         );
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (tid != null) {
+          clearTimeout(tid);
+        }
+        setLoading(false);
+        setBootStatus((prev) => (prev.startsWith("Błąd startu:") ? prev : "Dane wczytane — możesz korzystać z aplikacji."));
+      });
   }, [loadCore]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+    const w = window as unknown as { __FND_DEBUG__?: object };
+    w.__FND_DEBUG__ = {
+      bootStatus,
+      loading,
+      err,
+      buildUpdate,
+      hint: "W konsoli: filtr FineNetDash albo wpisz __FND_DEBUG__",
+    };
+  }, [bootStatus, loading, err, buildUpdate]);
 
   const loadUniverseFiltered = useCallback(async () => {
     try {
@@ -657,12 +726,21 @@ export default function App() {
           <p className="muted" style={{ margin: 0 }}>
             Łączenie z API…
           </p>
+          <p className="muted" style={{ margin: "0.75rem 0 0", fontSize: "0.82rem", lineHeight: 1.45 }}>
+            {bootStatus}
+          </p>
+          <p className="muted" style={{ margin: "0.5rem 0 0", fontSize: "0.75rem", lineHeight: 1.4 }}>
+            Backend musi działać na <strong>http://127.0.0.1:8000</strong> (Vite proxy z portu 5173/5174).
+            W konsoli (F12) wpisz <code style={{ fontSize: "0.85em" }}>__FND_DEBUG__</code> — obiekt diagnostyczny
+            (tryb dev).
+          </p>
         </div>
       </div>
     );
   }
 
   return (
+    <>
     <div className={`app-shell${sidebarCollapsed ? " app-shell--nav-collapsed" : ""}`}>
       <aside className="app-sidebar" aria-label="Nawigacja główna">
         <div className="app-sidebar__brand">
@@ -711,20 +789,23 @@ export default function App() {
           ))}
         </nav>
         <div className="app-sidebar__footer">
-          {buildUpdate?.update_available ? (
-            <a
-              className="app-update-pill"
-              href={buildUpdate.release_url ?? "#"}
-              target={buildUpdate.release_url ? "_blank" : undefined}
-              rel={buildUpdate.release_url ? "noreferrer" : undefined}
-              title={`Dostępna aktualizacja: ${buildUpdate.latest_version ?? "nowsza wersja"}`}
-              aria-label={`Dostępna aktualizacja: ${buildUpdate.latest_version ?? "nowsza wersja"}`}
-            >
-              <span className="app-update-pill__text">Dostępna aktualizacja: {buildUpdate.latest_version ?? "nowsza wersja"}</span>
-            </a>
-          ) : null}
-          <div className="app-build-pill" role="status" title={serverBuild ?? undefined}>
-            <strong>Build</strong> {serverBuild ?? "…"}
+          <div className="app-sidebar__version-block">
+            {buildUpdate?.update_available ? (
+              <div
+                className="app-update-notice"
+                role="status"
+                aria-live="polite"
+                aria-label={`Dostępna aktualizacja, wersja ${buildUpdate.latest_version ?? "nowsza"}`}
+              >
+                <span className="app-update-notice__text">
+                  <span className="app-update-notice__eyebrow">Dostępna aktualizacja</span>
+                  <span className="app-update-notice__version">{buildUpdate.latest_version ?? "nowsza wersja"}</span>
+                </span>
+              </div>
+            ) : null}
+            <div className="app-build-pill" role="status" title={serverBuild ?? undefined}>
+              <strong>Build</strong> {serverBuild ?? "…"}
+            </div>
           </div>
           <button
             type="button"
@@ -743,15 +824,35 @@ export default function App() {
 
       <div className="app-main">
         <header className="app-topbar">
-          <span className="app-topbar__title">{mobileTitle}</span>
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
-            aria-label={theme === "dark" ? "Włącz tryb jasny" : "Włącz tryb ciemny"}
-          >
-            {theme === "dark" ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
-          </button>
+          <div className="app-topbar__row">
+            <span className="app-topbar__title">{mobileTitle}</span>
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+              aria-label={theme === "dark" ? "Włącz tryb jasny" : "Włącz tryb ciemny"}
+            >
+              {theme === "dark" ? <Sun size={18} strokeWidth={2} /> : <Moon size={18} strokeWidth={2} />}
+            </button>
+          </div>
+          <div className="app-topbar__version" aria-label="Wersja aplikacji">
+            {buildUpdate?.update_available ? (
+              <div
+                className="app-update-notice app-update-notice--topbar"
+                role="status"
+                aria-live="polite"
+                aria-label={`Dostępna aktualizacja, wersja ${buildUpdate.latest_version ?? "nowsza"}`}
+              >
+                <span className="app-update-notice__text">
+                  <span className="app-update-notice__eyebrow">Dostępna aktualizacja</span>
+                  <span className="app-update-notice__version">{buildUpdate.latest_version ?? "nowsza wersja"}</span>
+                </span>
+              </div>
+            ) : null}
+            <div className="app-build-pill app-build-pill--topbar" role="status" title={serverBuild ?? undefined}>
+              <strong>Build</strong> {serverBuild ?? "…"}
+            </div>
+          </div>
         </header>
 
         <div className="app-main__inner">
@@ -1468,5 +1569,34 @@ export default function App() {
         ) : null}
       </div>
     </div>
+    {import.meta.env.DEV ? (
+      <div
+        className="dev-debug-hud"
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          fontSize: "11px",
+          lineHeight: 1.35,
+          padding: "6px 10px",
+          background: "rgba(15, 23, 42, 0.88)",
+          color: "#e2e8f0",
+          fontFamily: "var(--font-mono, ui-monospace, monospace)",
+          borderTop: "1px solid rgba(148, 163, 184, 0.35)",
+          pointerEvents: "none",
+        }}
+      >
+        <strong>DEV</strong> — boot: {bootStatus}
+        {" · "}
+        update:{" "}
+        {buildUpdate
+          ? `cur=${buildUpdate.current_version} latest=${buildUpdate.latest_version} avail=${String(buildUpdate.update_available)} err=${buildUpdate.error ?? "—"}`
+          : "brak odpowiedzi /api/version/update"}
+        {" · "}wpisz <strong>__FND_DEBUG__</strong> w konsoli
+      </div>
+    ) : null}
+    </>
   );
 }
