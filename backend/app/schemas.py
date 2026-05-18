@@ -266,3 +266,7 @@ class DividendForecastResponse(BaseModel):
     total_upcoming_horizon_pln_estimate: float
     horizon_days: int
     disclaimer: str
+    from_cache: bool = False
+    generated_at_utc: str | None = None
+    shares_resynced: bool = False
+    refresh_recommended: bool = False

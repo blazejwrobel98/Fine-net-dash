@@ -61,9 +61,9 @@ from app.services.backups import (
     restore_prices_from_snapshot,
 )
 from app.services.charts import allocation_payload, timeline_payload
-from app.services.dividend_forecast import dividend_forecast_payload
+from app.services.dividend_forecast_cache import dividend_forecast_for_api, refresh_forecast_cache
 from app.services.fx import fetch_nbp_usd_eur_pln, nbp_scheduler_day_key
-from app.services.portfolio import positions_summary
+from app.services.portfolio import lots_by_ticker, positions_summary
 from app.services.prices import get_price_rows, last_prices_update_global, refresh_tickers
 from app.services.trades import detect_trade_currency, execute_sell_fifo
 from app.services.wallet import upsert_today_snapshot, wallet_summary_dict
@@ -135,6 +135,21 @@ def _price_history_backup_job() -> None:
         backup_price_history_incremental_daily(db)
     except Exception as e:
         logger.exception("Price history backup job failed: %s", e)
+    finally:
+        db.close()
+
+
+def _dividend_forecast_daily_job() -> None:
+    """Raz dziennie: pełna prognoza z Yahoo i zapis cache."""
+    db = SessionLocal()
+    try:
+        by = lots_by_ticker(db)
+        if not any(sum(l.quantity for l in ls) > 0 for ls in by.values()):
+            return
+        refresh_forecast_cache(db, horizon_days=365)
+        logger.info("Dividend forecast cache refreshed (scheduled)")
+    except Exception as e:
+        logger.exception("Dividend forecast daily job failed: %s", e)
     finally:
         db.close()
 
@@ -218,6 +233,15 @@ async def lifespan(app: FastAPI):
             _price_history_backup_job,
             CronTrigger(hour=23, minute=55),
             id="prices_daily_backup",
+            replace_existing=True,
+            max_instances=1,
+            coalesce=True,
+            misfire_grace_time=7200,
+        )
+        scheduler.add_job(
+            _dividend_forecast_daily_job,
+            CronTrigger(hour=6, minute=15),
+            id="dividend_forecast_daily",
             replace_existing=True,
             max_instances=1,
             coalesce=True,
@@ -685,9 +709,10 @@ def delete_dividend(div_id: int, db: Session = Depends(get_db)):
 @app.get("/api/dividends/forecast", response_model=DividendForecastResponse)
 def dividends_forecast(
     horizon_days: int = Query(365, ge=30, le=800),
+    refresh: bool = Query(False, description="Pełne przeliczenie z Yahoo i zapis cache"),
     db: Session = Depends(get_db),
 ):
-    raw = dividend_forecast_payload(db, horizon_days=horizon_days)
+    raw = dividend_forecast_for_api(db, horizon_days=horizon_days, refresh=refresh)
     return DividendForecastResponse.model_validate(raw)
 
 

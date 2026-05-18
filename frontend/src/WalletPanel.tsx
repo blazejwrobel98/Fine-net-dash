@@ -36,6 +36,22 @@ export default function WalletPanel({ onChanged }: { onChanged: () => Promise<vo
     void load();
   }, [load]);
 
+  const loadForecastCached = useCallback(async () => {
+    setErr(null);
+    try {
+      const f = await api.dividendForecast(365);
+      if (f.from_cache || f.holdings.length > 0) {
+        setForecast(f);
+      }
+    } catch (e) {
+      setErr(String(e));
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadForecastCached();
+  }, [loadForecastCached]);
+
   async function addDep(e: React.FormEvent) {
     e.preventDefault();
     const a = parseFloat(depAmt.replace(",", "."));
@@ -47,11 +63,11 @@ export default function WalletPanel({ onChanged }: { onChanged: () => Promise<vo
     await onChanged();
   }
 
-  async function loadForecast() {
+  async function loadForecast(refresh = true) {
     setErr(null);
     setForecastLoading(true);
     try {
-      const f = await api.dividendForecast(365);
+      const f = await api.dividendForecast(365, { refresh });
       setForecast(f);
     } catch (e) {
       setErr(String(e));
@@ -114,17 +130,26 @@ export default function WalletPanel({ onChanged }: { onChanged: () => Promise<vo
       <div className="card">
         <h2>Prognoza dywidend (z Yahoo)</h2>
         <p className="muted">
-          Szacunek z historii wypłat: kwoty w PLN (bieżące kursy z Ustawień), terminy z odstępów między ostatnimi
-          dywidendami. Pobiera dane z internetu — może chwilę potrwać.
+          Ostatnia prognoza jest zapisywana na serwerze (bez ponownego odpytywania Yahoo przy każdym wejściu). Kwoty
+          są dopasowywane do bieżących lotów; pełne odświeżenie z Yahoo — przyciskiem lub automatycznie raz na dobę.
         </p>
+        {forecast?.generated_at_utc ? (
+          <p className="muted" style={{ marginTop: 0, fontSize: "0.85rem" }}>
+            Wygenerowano:{" "}
+            {new Date(forecast.generated_at_utc).toLocaleString("pl-PL")}
+            {forecast.from_cache ? " (z cache)" : ""}
+            {forecast.shares_resynced ? " · ilości zsynchronizowane z portfelem" : ""}
+            {forecast.refresh_recommended ? " · zalecane pełne odświeżenie" : ""}
+          </p>
+        ) : null}
         <button
           type="button"
           className="btn btn-primary"
           style={{ marginBottom: "1rem" }}
           disabled={forecastLoading}
-          onClick={() => void loadForecast()}
+          onClick={() => void loadForecast(true)}
         >
-          {forecastLoading ? "Liczenie…" : "Oblicz / odśwież prognozę"}
+          {forecastLoading ? "Liczenie…" : forecast ? "Odśwież z Yahoo" : "Oblicz prognozę"}
         </button>
         {forecast && (
           <>

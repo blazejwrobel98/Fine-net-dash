@@ -146,6 +146,10 @@ export type DividendForecastResponse = {
   total_upcoming_horizon_pln_estimate: number;
   horizon_days: number;
   disclaimer: string;
+  from_cache: boolean;
+  generated_at_utc: string | null;
+  shares_resynced: boolean;
+  refresh_recommended: boolean;
 };
 
 export type BackupFile = {
@@ -289,10 +293,11 @@ export const api = {
     }).then((r) => j<DividendReceipt>(r)),
   deleteDividend: (id: number) =>
     fetch(`${base}/api/wallet/dividends/${id}`, { method: "DELETE" }).then((r) => j<{ deleted: boolean }>(r)),
-  dividendForecast: (horizonDays = 365) =>
-    fetch(`${base}/api/dividends/forecast?horizon_days=${horizonDays}`).then((r) =>
-      j<DividendForecastResponse>(r),
-    ),
+  dividendForecast: (horizonDays = 365, opts?: { refresh?: boolean }) => {
+    const q = new URLSearchParams({ horizon_days: String(horizonDays) });
+    if (opts?.refresh) q.set("refresh", "true");
+    return fetch(`${base}/api/dividends/forecast?${q}`).then((r) => j<DividendForecastResponse>(r));
+  },
   chartTimeline: () => fetch(`${base}/api/charts/timeline`).then((r) => j<TimelinePayload>(r)),
   chartAllocation: () => fetch(`${base}/api/charts/allocation`).then((r) => j<AllocationPayload>(r)),
   listPortfolioBackups: () =>
