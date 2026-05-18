@@ -3,6 +3,7 @@ import {
   Globe,
   LayoutDashboard,
   LineChart as LineChartIcon,
+  FlaskConical,
   Moon,
   PanelLeft,
   PanelLeftClose,
@@ -24,9 +25,10 @@ import {
 } from "./api";
 import type { ChartColorScheme } from "./chartTheme";
 import ChartsPanel from "./ChartsPanel";
+import SimulationsPanel from "./SimulationsPanel";
 import WalletPanel from "./WalletPanel";
 
-type Tab = "positions" | "universe" | "wallet" | "charts" | "settings";
+type Tab = "positions" | "universe" | "wallet" | "charts" | "simulations" | "settings";
 
 type ThemeMode = "dark" | "light";
 
@@ -35,6 +37,7 @@ const NAV_ITEMS: { id: Tab; label: string; short: string; icon: LucideIcon }[] =
   { id: "universe", label: "Lista spółek", short: "Universe", icon: Globe },
   { id: "wallet", label: "Portfel PLN", short: "Portfel", icon: Wallet },
   { id: "charts", label: "Wykresy", short: "Wykresy", icon: LineChartIcon },
+  { id: "simulations", label: "Symulacje", short: "Symul.", icon: FlaskConical },
   { id: "settings", label: "Ustawienia", short: "Ustaw.", icon: SettingsIcon },
 ];
 
@@ -79,6 +82,13 @@ function tabPageMeta(tab: Tab): { eyebrow: string; title: string; description: s
         title: "Wykresy portfela",
         description:
           "Snapshoty zapisane przy odświeżaniu cen i zmianach portfela — ostatni punkt pokazuje aktualną wartość.",
+      };
+    case "simulations":
+      return {
+        eyebrow: "Scenariusze",
+        title: "Symulacje",
+        description:
+          "Lookback: gdybyś kupił dzisiejsze pozycje wcześniej. Projekcja: model na X lat ze stałym zwrotem i dywidendą.",
       };
     case "settings":
       return {
@@ -173,6 +183,48 @@ type UniverseSortKey =
   | "change"
   | "avg_price_period";
 
+const UNIVERSE_TABLE_PREFS_KEY = "universeTablePrefs";
+const TREND_PERIODS: TrendPeriod[] = ["1d", "1w", "1m", "1y", "5y"];
+const UNIVERSE_SORT_KEYS: UniverseSortKey[] = [
+  "ticker",
+  "name",
+  "sector",
+  "region",
+  "price",
+  "dividend",
+  "dividend_forward",
+  "change",
+  "avg_price_period",
+];
+
+type UniverseTablePrefs = {
+  trendPeriod: TrendPeriod;
+  sortKey: UniverseSortKey;
+  sortAsc: boolean;
+  regionFilter: string;
+  minDividendPct: string;
+};
+
+function readUniverseTablePrefs(): UniverseTablePrefs | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(UNIVERSE_TABLE_PREFS_KEY);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as Partial<UniverseTablePrefs>;
+    if (!p.trendPeriod || !TREND_PERIODS.includes(p.trendPeriod)) return null;
+    if (!p.sortKey || !UNIVERSE_SORT_KEYS.includes(p.sortKey)) return null;
+    return {
+      trendPeriod: p.trendPeriod,
+      sortKey: p.sortKey,
+      sortAsc: typeof p.sortAsc === "boolean" ? p.sortAsc : true,
+      regionFilter: typeof p.regionFilter === "string" ? p.regionFilter : "",
+      minDividendPct: typeof p.minDividendPct === "string" ? p.minDividendPct : "5",
+    };
+  } catch {
+    return null;
+  }
+}
+
 function compareUniverseRows(
   a: UniverseRow,
   b: UniverseRow,
@@ -246,16 +298,20 @@ function SortTh({
 export default function App() {
   const [tab, setTab] = useState<Tab>("positions");
   const [universeData, setUniverseData] = useState<UniverseResponse | null>(null);
-  const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>("1d");
-  const [universeSort, setUniverseSort] = useState<{ key: UniverseSortKey; asc: boolean }>({
-    key: "ticker",
-    asc: true,
+  const [trendPeriod, setTrendPeriod] = useState<TrendPeriod>(
+    () => readUniverseTablePrefs()?.trendPeriod ?? "1d",
+  );
+  const [universeSort, setUniverseSort] = useState<{ key: UniverseSortKey; asc: boolean }>(() => {
+    const p = readUniverseTablePrefs();
+    return p ? { key: p.sortKey, asc: p.sortAsc } : { key: "ticker", asc: true };
   });
   const [positions, setPositions] = useState<Position[]>([]);
   const [lots, setLots] = useState<PurchaseLot[]>([]);
   const [settings, setSettings] = useState<AppSettings | null>(null);
-  const [regionFilter, setRegionFilter] = useState<string>("");
-  const [minDividendPct, setMinDividendPct] = useState<string>("5");
+  const [regionFilter, setRegionFilter] = useState<string>(() => readUniverseTablePrefs()?.regionFilter ?? "");
+  const [minDividendPct, setMinDividendPct] = useState<string>(
+    () => readUniverseTablePrefs()?.minDividendPct ?? "5",
+  );
   const [loading, setLoading] = useState(true);
   /** Tekst pod spinnerem — widać, na którym etapie jest start (dev + zwykły). */
   const [bootStatus, setBootStatus] = useState("Start…");
@@ -298,6 +354,21 @@ export default function App() {
       /* ignore */
     }
   }, [sidebarCollapsed]);
+
+  useEffect(() => {
+    try {
+      const prefs: UniverseTablePrefs = {
+        trendPeriod,
+        sortKey: universeSort.key,
+        sortAsc: universeSort.asc,
+        regionFilter,
+        minDividendPct,
+      };
+      window.localStorage.setItem(UNIVERSE_TABLE_PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      /* ignore */
+    }
+  }, [trendPeriod, universeSort, regionFilter, minDividendPct]);
 
   useEffect(() => {
     setToastErrDismissed(false);
@@ -1218,6 +1289,8 @@ export default function App() {
       {tab === "wallet" && <WalletPanel onChanged={loadCore} />}
 
       {tab === "charts" && <ChartsPanel colorScheme={chartScheme} />}
+
+      {tab === "simulations" && <SimulationsPanel colorScheme={chartScheme} />}
 
       {tab === "settings" && settings && (
         <>

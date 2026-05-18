@@ -300,6 +300,37 @@ export const api = {
   },
   chartTimeline: () => fetch(`${base}/api/charts/timeline`).then((r) => j<TimelinePayload>(r)),
   chartAllocation: () => fetch(`${base}/api/charts/allocation`).then((r) => j<AllocationPayload>(r)),
+  simulationLookback: (yearsBack: number, opts?: { savedId?: string; save?: boolean }) => {
+    const q = new URLSearchParams({ years_back: String(yearsBack) });
+    if (opts?.savedId) q.set("saved_id", opts.savedId);
+    if (opts?.save === false) q.set("save", "false");
+    return fetch(`${base}/api/simulations/lookback?${q}`).then((r) => j<LookbackSimulation>(r));
+  },
+  simulationForward: (
+    opts: {
+      yearsForward: number;
+      annualReturnPct: number;
+      dividendYieldPct: number;
+      monthlyDepositPln: number;
+    },
+    req?: { savedId?: string; save?: boolean }
+  ) => {
+    const q = new URLSearchParams({
+      years_forward: String(opts.yearsForward),
+      annual_return_pct: String(opts.annualReturnPct),
+      dividend_yield_pct: String(opts.dividendYieldPct),
+      monthly_deposit_pln: String(opts.monthlyDepositPln),
+    });
+    if (req?.savedId) q.set("saved_id", req.savedId);
+    if (req?.save === false) q.set("save", "false");
+    return fetch(`${base}/api/simulations/forward?${q}`).then((r) => j<ForwardSimulation>(r));
+  },
+  simulationsSavedList: () =>
+    fetch(`${base}/api/simulations/saved`).then((r) => j<{ items: SimulationSavedSummary[] }>(r)),
+  simulationDeleteSaved: (id: string) =>
+    fetch(`${base}/api/simulations/saved/${encodeURIComponent(id)}`, { method: "DELETE" }).then((r) =>
+      j<{ deleted: boolean }>(r)
+    ),
   listPortfolioBackups: () =>
     fetch(`${base}/api/backups/portfolio`).then((r) => j<BackupListResponse>(r)),
   createPortfolioBackup: () =>
@@ -366,4 +397,49 @@ export type TimelinePayload = {
 export type AllocationPayload = {
   slices: { ticker: string; label: string; value_pln: number; pct: number }[];
   total_pln: number;
+};
+
+export type SimulationPoint = {
+  date: string;
+  holdings_value_pln?: number | null;
+  total_equity_pln?: number | null;
+  cumulative_deposits_pln?: number | null;
+};
+
+export type SimulationSavedSummary = {
+  id: string;
+  kind: "lookback" | "forward" | string;
+  label: string;
+  created_at_utc: string;
+};
+
+export type LookbackSimulation = {
+  years_back: number;
+  start_date: string | null;
+  end_date: string;
+  virtual_cost_pln: number;
+  current_value_pln: number;
+  actual_invested_pln: number;
+  series: SimulationPoint[];
+  disclaimer: string;
+  note?: string | null;
+  saved_id?: string | null;
+  from_cache?: boolean;
+  created_at_utc?: string | null;
+  shares_resynced?: boolean;
+  refresh_recommended?: boolean;
+};
+
+export type ForwardSimulation = {
+  years_forward: number;
+  annual_return_pct: number;
+  dividend_yield_pct: number;
+  monthly_deposit_pln: number;
+  start_equity_pln: number;
+  end_equity_pln: number;
+  series: SimulationPoint[];
+  disclaimer: string;
+  saved_id?: string | null;
+  from_cache?: boolean;
+  created_at_utc?: string | null;
 };

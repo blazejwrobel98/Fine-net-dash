@@ -144,6 +144,22 @@ def test_charts_endpoints(client: TestClient):
     assert a.status_code == 200
 
 
+def test_simulations_endpoints(client: TestClient):
+    lb = client.get("/api/simulations/lookback", params={"years_back": 1})
+    assert lb.status_code == 200
+    assert "series" in lb.json()
+    fwd = client.get(
+        "/api/simulations/forward",
+        params={
+            "years_forward": 5,
+            "annual_return_pct": 7,
+            "dividend_yield_pct": 3,
+        },
+    )
+    assert fwd.status_code == 200
+    assert fwd.json()["series"]
+
+
 def test_backup_portfolio_list_and_create(client: TestClient):
     r = client.get("/api/backups/portfolio")
     assert r.status_code == 200

@@ -8,7 +8,7 @@ from threading import Lock
 import httpx
 
 # Domyślnie przy lokalnym uruchomieniu bez zmiennych środowiskowych.
-_DEFAULT_VERSION = "0.3.5"
+_DEFAULT_VERSION = "0.3.6"
 _RELEASES_URL = "https://api.github.com/repos/blazejwrobel98/Fine-net-dash/releases/latest"
 # Tag z GitHub bywa `v0.3.4`; APP_VERSION z CI też — akceptujemy `v` / `V` na początku.
 _VERSION_RE = re.compile(r"^[vV]?(\d+)\.(\d+)\.(\d+)$")

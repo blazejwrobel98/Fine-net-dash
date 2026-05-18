@@ -42,6 +42,9 @@ from app.schemas import (
     TradeResultOut,
     UniverseListResponse,
     UniverseRowOut,
+    ForwardSimulationOut,
+    LookbackSimulationOut,
+    SimulationSavedListOut,
     WalletSummaryOut,
 )
 from app.seed_universe import ensure_default_settings, seed_universe_if_empty, sync_universe_additions
@@ -66,6 +69,8 @@ from app.services.fx import fetch_nbp_usd_eur_pln, nbp_scheduler_day_key
 from app.services.portfolio import lots_by_ticker, positions_summary
 from app.services.prices import get_price_rows, last_prices_update_global, refresh_tickers
 from app.services.trades import detect_trade_currency, execute_sell_fifo
+from app.services.simulation_store import delete_saved, get_saved, list_saved, save_simulation
+from app.services.simulations import forward_simulation_payload, lookback_simulation_payload
 from app.services.wallet import upsert_today_snapshot, wallet_summary_dict
 
 logger = logging.getLogger(__name__)
@@ -714,6 +719,98 @@ def dividends_forecast(
 ):
     raw = dividend_forecast_for_api(db, horizon_days=horizon_days, refresh=refresh)
     return DividendForecastResponse.model_validate(raw)
+
+
+@app.get("/api/simulations/saved", response_model=SimulationSavedListOut)
+def simulations_saved_list():
+    return SimulationSavedListOut(items=list_saved())
+
+
+@app.get("/api/simulations/saved/{entry_id}")
+def simulations_saved_get(entry_id: str, db: Session = Depends(get_db)):
+    raw = get_saved(entry_id, db)
+    if not raw:
+        raise HTTPException(404, "Nie znaleziono zapisanej symulacji.")
+    body = {k: v for k, v in raw.items() if k != "kind"}
+    if raw.get("kind") == "forward":
+        return ForwardSimulationOut.model_validate(body)
+    return LookbackSimulationOut.model_validate(body)
+
+
+@app.delete("/api/simulations/saved/{entry_id}")
+def simulations_saved_delete(entry_id: str):
+    if not delete_saved(entry_id):
+        raise HTTPException(404, "Nie znaleziono zapisanej symulacji.")
+    return {"deleted": True}
+
+
+@app.get("/api/simulations/lookback", response_model=LookbackSimulationOut)
+def simulations_lookback(
+    years_back: float = Query(1.0, ge=0.25, le=10.0),
+    saved_id: str | None = Query(None),
+    save: bool = Query(True, description="Zapisz wynik do historii"),
+    db: Session = Depends(get_db),
+):
+    if saved_id:
+        raw = get_saved(saved_id, db)
+        if not raw:
+            raise HTTPException(404, "Nie znaleziono zapisanej symulacji.")
+        body = {k: v for k, v in raw.items() if k != "kind"}
+        return LookbackSimulationOut.model_validate(body)
+    payload = lookback_simulation_payload(db, years_back=years_back)
+    if save:
+        sid = save_simulation(db, kind="lookback", params={"years_back": years_back}, payload=payload)
+        payload = {
+            **payload,
+            "saved_id": sid,
+            "from_cache": False,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+    return LookbackSimulationOut.model_validate(payload)
+
+
+@app.get("/api/simulations/forward", response_model=ForwardSimulationOut)
+def simulations_forward(
+    years_forward: float = Query(10.0, ge=0.5, le=40.0),
+    annual_return_pct: float = Query(7.0, ge=-50.0, le=50.0),
+    dividend_yield_pct: float = Query(3.0, ge=0.0, le=30.0),
+    monthly_deposit_pln: float = Query(0.0, ge=0.0),
+    saved_id: str | None = Query(None),
+    save: bool = Query(True, description="Zapisz wynik do historii"),
+    db: Session = Depends(get_db),
+):
+    if saved_id:
+        raw = get_saved(saved_id, db)
+        if not raw:
+            raise HTTPException(404, "Nie znaleziono zapisanej symulacji.")
+        body = {k: v for k, v in raw.items() if k != "kind"}
+        return ForwardSimulationOut.model_validate(body)
+    payload = forward_simulation_payload(
+        db,
+        years_forward=years_forward,
+        annual_return_pct=annual_return_pct,
+        dividend_yield_pct=dividend_yield_pct,
+        monthly_deposit_pln=monthly_deposit_pln,
+    )
+    if save:
+        sid = save_simulation(
+            db,
+            kind="forward",
+            params={
+                "years_forward": years_forward,
+                "annual_return_pct": annual_return_pct,
+                "dividend_yield_pct": dividend_yield_pct,
+                "monthly_deposit_pln": monthly_deposit_pln,
+            },
+            payload=payload,
+        )
+        payload = {
+            **payload,
+            "saved_id": sid,
+            "from_cache": False,
+            "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+    return ForwardSimulationOut.model_validate(payload)
 
 
 @app.get("/api/charts/timeline")

@@ -270,3 +270,52 @@ class DividendForecastResponse(BaseModel):
     generated_at_utc: str | None = None
     shares_resynced: bool = False
     refresh_recommended: bool = False
+
+
+class SimulationPointOut(BaseModel):
+    date: str
+    holdings_value_pln: float | None = None
+    total_equity_pln: float | None = None
+    cumulative_deposits_pln: float | None = None
+
+
+class LookbackSimulationOut(BaseModel):
+    years_back: float
+    start_date: str | None
+    end_date: str
+    virtual_cost_pln: float
+    current_value_pln: float
+    actual_invested_pln: float
+    series: list[SimulationPointOut]
+    disclaimer: str
+    note: str | None = None
+    saved_id: str | None = None
+    from_cache: bool = False
+    created_at_utc: str | None = None
+    shares_resynced: bool = False
+    refresh_recommended: bool = False
+
+
+class ForwardSimulationOut(BaseModel):
+    years_forward: float
+    annual_return_pct: float
+    dividend_yield_pct: float
+    monthly_deposit_pln: float
+    start_equity_pln: float
+    end_equity_pln: float
+    series: list[SimulationPointOut]
+    disclaimer: str
+    saved_id: str | None = None
+    from_cache: bool = False
+    created_at_utc: str | None = None
+
+
+class SimulationSavedSummaryOut(BaseModel):
+    id: str
+    kind: str
+    label: str
+    created_at_utc: str
+
+
+class SimulationSavedListOut(BaseModel):
+    items: list[SimulationSavedSummaryOut]

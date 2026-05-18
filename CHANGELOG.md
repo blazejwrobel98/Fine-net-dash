@@ -4,6 +4,13 @@ Format oparty na [Keep a Changelog](https://keepachangelog.com/pl/1.0.0/). Wersj
 
 ## [Unreleased]
 
+## [0.3.6] — 2026-05-18
+
+- **Symulacje:** zakładka lookback (gdyby kupił wcześniej) i projekcja na przyszłość; API `/api/simulations/*`.
+- **Cache symulacji:** zapis historii obliczeń, podgląd bez Yahoo, usuwanie (`/api/simulations/saved`).
+- **Prognoza dywidend:** cache na serwerze, sync ilości z lotów, dzienny job odświeżania (6:15).
+- **Lista spółek:** `localStorage` pamięta sortowanie, okres trendu (1D–5L), region i min. dywidendę.
+
 ## [0.3.5] — 2026-05-15
 
 - **Wykresy:** wykres **wpłaty vs wartość portfela** — skumulowane wpłaty na konto (bez dywidend) obok wartości całkowitej; pole `deposits_cumulative_pln` w `/api/charts/timeline`.
